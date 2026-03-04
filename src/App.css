@@ -124,10 +124,11 @@ body.menu-open { overflow: hidden; }
   padding: 22px;
 }
 
+/* Key change: do NOT max-width constrain the whole app content */
 .content > div {
   width: 100%;
-  max-width: 1100px;
-  margin: 0 auto;
+  max-width: none;
+  margin: 0;
 }
 
 .pageTitle {
@@ -192,16 +193,19 @@ textarea {
 
 .blogInput { margin-bottom: 18px; }
 
-/* Grid layout for platform blocks */
+/* Better grid: auto-fit columns that fill the available width */
 .platformGrid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
   gap: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+  align-items: start;
 }
 
-/* LinkedIn is the 3rd platform block: full width on desktop */
-.platformGrid .platformBlock:nth-child(3) {
-  grid-column: span 2;
+/* LinkedIn full width only when we actually have 2+ columns */
+@media (min-width: 980px) {
+  .platformGrid .platformBlock:nth-child(3) {
+    grid-column: 1 / -1;
+  }
 }
 
 /* Platform blocks */
@@ -272,7 +276,6 @@ textarea {
 }
 
 .displayName { font-weight: 900; }
-
 .handle { opacity: 0.7; font-weight: 700; }
 
 .metaRow { opacity: 0.7; font-size: 12px; font-weight: 700; }
@@ -299,14 +302,6 @@ textarea {
 @media (max-width: 1000px) {
   .sidebar { width: 220px; }
   .content { padding: 18px; }
-
-  .platformGrid {
-    grid-template-columns: 1fr;
-  }
-
-  .platformGrid .platformBlock:nth-child(3) {
-    grid-column: span 1;
-  }
 }
 
 /* Mobile drawer */
@@ -341,8 +336,9 @@ textarea {
   .overlay.show { display: block; }
 
   .content { padding: 14px; }
-
   .headerTitle { font-size: 16px; }
+
+  /* Grid stacks naturally because min column size can’t fit */
 }
 
 /* Small phones */
