@@ -10,9 +10,7 @@ const KEY = "current";
 async function getDb() {
   return openDB(DB_NAME, 1, {
     upgrade(db) {
-      if (!db.objectStoreNames.contains(STORE)) {
-        db.createObjectStore(STORE);
-      }
+      if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE);
     },
   });
 }
@@ -30,8 +28,7 @@ async function loadDraft() {
 function clampText(text, max) {
   const cleaned = (text || "").replace(/\s+/g, " ").trim();
   if (!cleaned) return "";
-  if (cleaned.length <= max) return cleaned;
-  return cleaned.slice(0, max - 1) + "…";
+  return cleaned.length <= max ? cleaned : cleaned.slice(0, max - 1) + "…";
 }
 
 function buildOutputs(blogText, tone) {
@@ -56,102 +53,9 @@ function buildOutputs(blogText, tone) {
     linkedin: `New post published.\n\n${summary}\n\nIf you’d like to read it, I’m happy to share the link.`,
   };
 
-  const map = { professional, conversational, promotional };
-  return map[tone] || professional;
-}
-
-function IconMenu() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        fill="currentColor"
-        d="M3 6.5c0-.55.45-1 1-1h16a1 1 0 1 1 0 2H4c-.55 0-1-.45-1-1Zm0 5.5c0-.55.45-1 1-1h16a1 1 0 1 1 0 2H4c-.55 0-1-.45-1-1Zm1 4.5a1 1 0 1 0 0 2h16a1 1 0 1 0 0-2H4Z"
-      />
-    </svg>
-  );
-}
-
-function IconClose() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        fill="currentColor"
-        d="M18.3 5.71a1 1 0 0 0-1.41 0L12 10.59 7.11 5.7A1 1 0 0 0 5.7 7.11L10.59 12l-4.9 4.89a1 1 0 1 0 1.41 1.42L12 13.41l4.89 4.9a1 1 0 0 0 1.42-1.41L13.41 12l4.9-4.89a1 1 0 0 0-.01-1.4Z"
-      />
-    </svg>
-  );
-}
-
-function Layout({ children }) {
-  const [menuOpen, setMenuOpen] = React.useState(false);
-
-  React.useEffect(() => {
-    function onKeyDown(e) {
-      if (e.key === "Escape") setMenuOpen(false);
-    }
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, []);
-
-  React.useEffect(() => {
-    document.body.classList.toggle("menu-open", menuOpen);
-    return () => document.body.classList.remove("menu-open");
-  }, [menuOpen]);
-
-  function closeMenu() {
-    setMenuOpen(false);
-  }
-
-  return (
-    <div className="app">
-      <div
-        className={menuOpen ? "overlay show" : "overlay"}
-        onClick={closeMenu}
-        aria-hidden={!menuOpen}
-      />
-
-      <aside className={menuOpen ? "sidebar open" : "sidebar"}>
-        <div className="sidebarTop">
-          <h2>SparkSocial</h2>
-          <button
-            className="iconBtn closeBtn"
-            type="button"
-            onClick={closeMenu}
-            aria-label="Close menu"
-          >
-            <IconClose />
-          </button>
-        </div>
-
-        <nav onClick={closeMenu}>
-          <NavLink to="/inbox" end>
-            Inbox
-          </NavLink>
-          <NavLink to="/drafts">Drafts</NavLink>
-          <NavLink to="/scheduler">Scheduler</NavLink>
-          <NavLink to="/connections">Connections</NavLink>
-          <NavLink to="/logs">Logs</NavLink>
-        </nav>
-      </aside>
-
-      <main className="main">
-        <header className="header">
-          <button
-            className="iconBtn menuBtn"
-            type="button"
-            onClick={() => setMenuOpen(true)}
-            aria-label="Open menu"
-          >
-            <IconMenu />
-          </button>
-
-          <div className="headerTitle">Social Media Management</div>
-        </header>
-
-        <div className="content">{children}</div>
-      </main>
-    </div>
-  );
+  return (tone === "conversational" && conversational) ||
+    (tone === "promotional" && promotional) ||
+    professional;
 }
 
 function PreviewCard({ variant, body }) {
@@ -160,7 +64,7 @@ function PreviewCard({ variant, body }) {
       <div className="previewCard x">
         <div className="previewTop">
           <div className="avatar">S</div>
-          <div>
+          <div className="previewMeta">
             <div className="nameRow">
               <span className="displayName">SparkSocial</span>
               <span className="handle">@sparkwaveitservice</span>
@@ -178,7 +82,7 @@ function PreviewCard({ variant, body }) {
       <div className="previewCard fb">
         <div className="previewTop">
           <div className="avatar">S</div>
-          <div>
+          <div className="previewMeta">
             <div className="nameRow">
               <span className="displayName">SparkSocial</span>
               <span className="metaDot">·</span>
@@ -201,7 +105,7 @@ function PreviewCard({ variant, body }) {
     <div className="previewCard li">
       <div className="previewTop">
         <div className="avatar">S</div>
-        <div>
+        <div className="previewMeta">
           <div className="nameRow">
             <span className="displayName">SparkSocial</span>
           </div>
@@ -228,9 +132,11 @@ function PlatformBlock({ title, value, setValue, rightSlot, previewVariant }) {
       </div>
 
       <textarea
-        rows={4}
+        className="platformTextarea"
+        rows={5}
         value={value}
         onChange={(e) => setValue(e.target.value)}
+        placeholder={`Write / edit your ${title} post here...`}
       />
 
       <PreviewCard variant={previewVariant} body={value} />
@@ -280,8 +186,10 @@ function Inbox() {
   }, [tone, blogText, twitter, facebook, linkedin]);
 
   return (
-    <div>
-      <h2 className="pageTitle">Blog → Social Media Generator</h2>
+    <div className="page">
+      <div className="pageTitleRow">
+        <h2 className="pageTitle">Blog → Social Media Generator</h2>
+      </div>
 
       <div className="toolbar">
         <div className="toolbarLeft">
@@ -294,13 +202,15 @@ function Inbox() {
         </div>
 
         <div className="toolbarRight">
-          <button onClick={generatePosts}>Generate</button>
+          <button className="primaryBtn" onClick={generatePosts}>
+            Generate
+          </button>
         </div>
       </div>
 
       <textarea
         className="blogInput"
-        rows={10}
+        rows={9}
         placeholder="Paste your blog article or newsletter text here..."
         value={blogText}
         onChange={(e) => setBlogText(e.target.value)}
@@ -317,7 +227,9 @@ function Inbox() {
               <span className={twitterOver ? "count over" : "count"}>
                 {twitterCount}/280
               </span>
-              <button onClick={() => copy(twitter)}>Copy</button>
+              <button className="ghostBtn" onClick={() => copy(twitter)}>
+                Copy
+              </button>
             </>
           }
         />
@@ -327,7 +239,11 @@ function Inbox() {
           value={facebook}
           setValue={setFacebook}
           previewVariant="fb"
-          rightSlot={<button onClick={() => copy(facebook)}>Copy</button>}
+          rightSlot={
+            <button className="ghostBtn" onClick={() => copy(facebook)}>
+              Copy
+            </button>
+          }
         />
 
         <PlatformBlock
@@ -335,7 +251,11 @@ function Inbox() {
           value={linkedin}
           setValue={setLinkedin}
           previewVariant="li"
-          rightSlot={<button onClick={() => copy(linkedin)}>Copy</button>}
+          rightSlot={
+            <button className="ghostBtn" onClick={() => copy(linkedin)}>
+              Copy
+            </button>
+          }
         />
       </div>
     </div>
@@ -343,16 +263,79 @@ function Inbox() {
 }
 
 function Drafts() {
-  return <div>Drafts</div>;
+  return <div className="page"><h2 className="pageTitle">Drafts</h2></div>;
 }
 function Scheduler() {
-  return <div>Scheduler</div>;
+  return <div className="page"><h2 className="pageTitle">Scheduler</h2></div>;
 }
 function Connections() {
-  return <div>Connections</div>;
+  return <div className="page"><h2 className="pageTitle">Connections</h2></div>;
 }
 function Logs() {
-  return <div>Logs</div>;
+  return <div className="page"><h2 className="pageTitle">Logs</h2></div>;
+}
+
+function Layout({ children }) {
+  const [navOpen, setNavOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    function onHashChange() {
+      setNavOpen(false);
+    }
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
+
+  return (
+    <div className="app">
+      <button
+        className="hamburger"
+        onClick={() => setNavOpen((v) => !v)}
+        aria-label="Open navigation"
+        aria-expanded={navOpen}
+      >
+        <span />
+        <span />
+        <span />
+      </button>
+
+      <div
+        className={navOpen ? "navOverlay show" : "navOverlay"}
+        onClick={() => setNavOpen(false)}
+      />
+
+      <aside className={navOpen ? "sidebar open" : "sidebar"}>
+        <div className="brandRow">
+          <div className="brandMark">S</div>
+          <div>
+            <div className="brandName">SparkSocial</div>
+            <div className="brandTag">Social toolkit</div>
+          </div>
+        </div>
+
+        <nav className="nav">
+          <NavLink to="/inbox" end>
+            Inbox
+          </NavLink>
+          <NavLink to="/drafts">Drafts</NavLink>
+          <NavLink to="/scheduler">Scheduler</NavLink>
+          <NavLink to="/connections">Connections</NavLink>
+          <NavLink to="/logs">Logs</NavLink>
+        </nav>
+      </aside>
+
+      <main className="main">
+        <header className="header">
+          <div className="headerGlow" />
+          <div className="headerInner">
+            <div className="headerTitle">Social Media Management</div>
+          </div>
+        </header>
+
+        <div className="content">{children}</div>
+      </main>
+    </div>
+  );
 }
 
 export default function App() {
