@@ -52,3 +52,8 @@ body {
 .content {
   padding: 20px;
 }
+
+.sidebar a.active {
+  color: white;
+  font-weight: 600;
+}

@@ -1,6 +1,6 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import React from "react";
+import { HashRouter, Routes, Route, NavLink } from "react-router-dom";
 import "./App.css";
-import React from "react"
 
 function Layout({ children }) {
   return (
@@ -9,93 +9,51 @@ function Layout({ children }) {
         <h2>SparkSocial</h2>
 
         <nav>
-          <a href="#">Inbox</a>
-          <a href="#">Drafts</a>
-          <a href="#">Scheduler</a>
-          <a href="#">Connections</a>
-          <a href="#">Logs</a>
+          <NavLink to="/inbox" end>Inbox</NavLink>
+          <NavLink to="/drafts">Drafts</NavLink>
+          <NavLink to="/scheduler">Scheduler</NavLink>
+          <NavLink to="/connections">Connections</NavLink>
+          <NavLink to="/logs">Logs</NavLink>
         </nav>
       </aside>
 
       <main className="main">
-        <header className="header">
-          Social Media Management
-        </header>
-
-        <div className="content">
-          {children}
-        </div>
+        <header className="header">Social Media Management</header>
+        <div className="content">{children}</div>
       </main>
     </div>
   );
 }
 
 function Inbox() {
-  const [blogText, setBlogText] = React.useState("")
-  const [twitter, setTwitter] = React.useState("")
-  const [facebook, setFacebook] = React.useState("")
-  const [linkedin, setLinkedin] = React.useState("")
-
-  function generatePosts() {
-    if (!blogText) return
-
-    const short = blogText.slice(0, 200)
-
-    setTwitter(short + " #blog #insight")
-
-    setFacebook(
-      "I just published a new article and wanted to share a quick thought from it:\n\n" +
-      short +
-      "\n\nWhat do you think?"
-    )
-
-    setLinkedin(
-      "New article reflection:\n\n" +
-      short +
-      "\n\nCurious how others approach this."
-    )
-  }
-
-  return (
-    <div>
-
-      <h2>Blog Post → Social Media Generator</h2>
-
-      <textarea
-        rows="10"
-        style={{width:"100%", marginBottom:"10px"}}
-        placeholder="Paste your blog post here..."
-        value={blogText}
-        onChange={(e)=>setBlogText(e.target.value)}
-      />
-
-      <button onClick={generatePosts}>
-        Generate Posts
-      </button>
-
-      <h3>Twitter / X</h3>
-      <textarea rows="4" style={{width:"100%"}} value={twitter} readOnly />
-
-      <h3>Facebook</h3>
-      <textarea rows="4" style={{width:"100%"}} value={facebook} readOnly />
-
-      <h3>LinkedIn</h3>
-      <textarea rows="4" style={{width:"100%"}} value={linkedin} readOnly />
-
-    </div>
-  )
+  return <div>Inbox (incoming blog posts will appear here)</div>;
+}
+function Drafts() {
+  return <div>Drafts</div>;
+}
+function Scheduler() {
+  return <div>Scheduler</div>;
+}
+function Connections() {
+  return <div>Connections</div>;
+}
+function Logs() {
+  return <div>Logs</div>;
 }
 
-function App() {
+export default function App() {
   return (
-    <BrowserRouter>
+    <HashRouter>
       <Layout>
         <Routes>
           <Route path="/" element={<Inbox />} />
+          <Route path="/inbox" element={<Inbox />} />
+          <Route path="/drafts" element={<Drafts />} />
+          <Route path="/scheduler" element={<Scheduler />} />
+          <Route path="/connections" element={<Connections />} />
+          <Route path="/logs" element={<Logs />} />
         </Routes>
       </Layout>
-    </BrowserRouter>
+    </HashRouter>
   );
 }
-
-export default App;
