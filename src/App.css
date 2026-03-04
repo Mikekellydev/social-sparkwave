@@ -83,3 +83,86 @@ body {
   color: #ef4444;
   font-weight: 700;
 }
+
+.previewCard {
+  margin-top: 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 14px;
+  background: white;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.previewTop {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+
+.avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  background: #111827;
+  color: white;
+}
+
+.nameRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.displayName {
+  font-weight: 700;
+}
+
+.handle {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.metaRow {
+  color: #6b7280;
+  font-size: 13px;
+  margin-top: 2px;
+}
+
+.metaDot {
+  color: #6b7280;
+}
+
+.previewBody {
+  white-space: pre-wrap;
+  line-height: 1.4;
+  font-size: 15px;
+  margin-top: 6px;
+}
+
+.previewFooter {
+  display: flex;
+  gap: 14px;
+  border-top: 1px solid #f3f4f6;
+  margin-top: 12px;
+  padding-top: 10px;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.previewCard.x {
+  border-left: 4px solid #111827;
+}
+
+.previewCard.fb {
+  border-left: 4px solid #1877f2;
+}
+
+.previewCard.li {
+  border-left: 4px solid #0a66c2;
+}

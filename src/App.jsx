@@ -163,23 +163,38 @@ function Inbox() {
         onChange={(e) => setBlogText(e.target.value)}
       />
 
-      <div className="platformBlock">
-        <div className="platformHeader">
-          <h3>Twitter / X</h3>
-          <div className="platformActions">
-            <span className={twitterOver ? "count over" : "count"}>
-              {twitterCount}/280
-            </span>
-            <button onClick={() => copy(twitter)}>Copy</button>
-          </div>
-        </div>
-        <textarea
-          rows="4"
-          style={{ width: "100%" }}
-          value={twitter}
-          onChange={(e) => setTwitter(e.target.value)}
-        />
-      </div>
+     <div className="platformBlock">
+       <div className="platformHeader">
+         <h3>Twitter / X</h3>
+         <div className="platformActions">
+           <span className={twitterOver ? "count over" : "count"}>
+             {twitterCount}/280
+           </span>
+           <button onClick={() => copy(twitter)}>Copy</button>
+         </div>
+       </div>
+     
+       <textarea
+         rows="4"
+         style={{ width: "100%" }}
+         value={twitter}
+         onChange={(e) => setTwitter(e.target.value)}
+       />
+     
+       <div className="previewCard x">
+         <div className="previewTop">
+           <div className="avatar">S</div>
+           <div>
+             <div className="nameRow">
+               <span className="displayName">SparkSocial</span>
+               <span className="handle">@sparkwaveitservice</span>
+             </div>
+             <div className="metaRow">Just now</div>
+           </div>
+         </div>
+         <div className="previewBody">{twitter || "Preview will appear here."}</div>
+       </div>
+     </div>
 
       <div className="platformBlock">
         <div className="platformHeader">
@@ -188,32 +203,69 @@ function Inbox() {
             <button onClick={() => copy(facebook)}>Copy</button>
           </div>
         </div>
+      
         <textarea
           rows="4"
           style={{ width: "100%" }}
           value={facebook}
           onChange={(e) => setFacebook(e.target.value)}
         />
-      </div>
-
-      <div className="platformBlock">
-        <div className="platformHeader">
-          <h3>LinkedIn</h3>
-          <div className="platformActions">
-            <button onClick={() => copy(linkedin)}>Copy</button>
+      
+        <div className="previewCard fb">
+          <div className="previewTop">
+            <div className="avatar">S</div>
+            <div>
+              <div className="nameRow">
+                <span className="displayName">SparkSocial</span>
+                <span className="metaDot">·</span>
+                <span className="metaRow">Just now</span>
+              </div>
+              <div className="metaRow">Public</div>
+            </div>
+          </div>
+          <div className="previewBody">{facebook || "Preview will appear here."}</div>
+          <div className="previewFooter">
+            <span>Like</span>
+            <span>Comment</span>
+            <span>Share</span>
           </div>
         </div>
-        <textarea
-          rows="4"
-          style={{ width: "100%" }}
-          value={linkedin}
-          onChange={(e) => setLinkedin(e.target.value)}
-        />
       </div>
-    </div>
-  );
-}
 
+     <div className="platformBlock">
+       <div className="platformHeader">
+         <h3>LinkedIn</h3>
+         <div className="platformActions">
+           <button onClick={() => copy(linkedin)}>Copy</button>
+         </div>
+       </div>
+     
+       <textarea
+         rows="4"
+         style={{ width: "100%" }}
+         value={linkedin}
+         onChange={(e) => setLinkedin(e.target.value)}
+       />
+     
+       <div className="previewCard li">
+         <div className="previewTop">
+           <div className="avatar">S</div>
+           <div>
+             <div className="nameRow">
+               <span className="displayName">SparkSocial</span>
+             </div>
+             <div className="metaRow">IT Services · Just now</div>
+           </div>
+         </div>
+         <div className="previewBody">{linkedin || "Preview will appear here."}</div>
+         <div className="previewFooter">
+           <span>Like</span>
+           <span>Comment</span>
+           <span>Repost</span>
+           <span>Send</span>
+         </div>
+       </div>
+     </div>
 
 function Drafts() {
   return <div>Drafts</div>;
