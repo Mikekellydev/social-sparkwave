@@ -27,13 +27,115 @@ async function loadDraft() {
   return db.get(STORE, KEY);
 }
 
+function clampText(text, max) {
+  const cleaned = (text || "").replace(/\s+/g, " ").trim();
+  if (!cleaned) return "";
+  if (cleaned.length <= max) return cleaned;
+  return cleaned.slice(0, max - 1) + "…";
+}
+
+function buildOutputs(blogText, tone) {
+  const summary = clampText(blogText, 240);
+  const baseHashtag = "#ITLeadership";
+
+  const professional = {
+    twitter: `${summary} ${baseHashtag}`.trim(),
+    facebook: `I published a new article and wanted to share one takeaway:\n\n${summary}\n\nWhat’s your perspective on this?`,
+    linkedin: `New article reflection:\n\n${summary}\n\nI’d value input from others who have worked through similar challenges.`,
+  };
+
+  const conversational = {
+    twitter: `${summary} What do you think?`.trim(),
+    facebook: `Quick thought from something I wrote recently:\n\n${summary}\n\nIf you’ve been there too, I’d love to hear what you learned.`,
+    linkedin: `Something I’ve been thinking about lately:\n\n${summary}\n\nWhat would you add from your experience?`,
+  };
+
+  const promotional = {
+    twitter: `New post: ${clampText(blogText, 200)} Read more soon.`,
+    facebook: `New post is live.\n\n${summary}\n\nIf you want the full context, I’ll share the link next.`,
+    linkedin: `New post published.\n\n${summary}\n\nIf you’d like to read it, I’m happy to share the link.`,
+  };
+
+  const map = { professional, conversational, promotional };
+  return map[tone] || professional;
+}
+
+function IconMenu() {
+  return (
+    <svg
+      width="22"
+      height="22"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path
+        fill="currentColor"
+        d="M3 6.5c0-.55.45-1 1-1h16a1 1 0 1 1 0 2H4c-.55 0-1-.45-1-1Zm0 5.5c0-.55.45-1 1-1h16a1 1 0 1 1 0 2H4c-.55 0-1-.45-1-1Zm1 4.5a1 1 0 1 0 0 2h16a1 1 0 1 0 0-2H4Z"
+      />
+    </svg>
+  );
+}
+
+function IconClose() {
+  return (
+    <svg
+      width="22"
+      height="22"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path
+        fill="currentColor"
+        d="M18.3 5.71a1 1 0 0 0-1.41 0L12 10.59 7.11 5.7A1 1 0 0 0 5.7 7.11L10.59 12l-4.9 4.89a1 1 0 1 0 1.41 1.42L12 13.41l4.89 4.9a1 1 0 0 0 1.42-1.41L13.41 12l4.9-4.89a1 1 0 0 0-.01-1.4Z"
+      />
+    </svg>
+  );
+}
+
 function Layout({ children }) {
+  const [menuOpen, setMenuOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    function onKeyDown(e) {
+      if (e.key === "Escape") setMenuOpen(false);
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, []);
+
+  React.useEffect(() => {
+    document.body.classList.toggle("menu-open", menuOpen);
+    return () => document.body.classList.remove("menu-open");
+  }, [menuOpen]);
+
+  function closeMenu() {
+    setMenuOpen(false);
+  }
+
   return (
     <div className="app">
-      <aside className="sidebar">
-        <h2>SparkSocial</h2>
+      <div
+        className={menuOpen ? "overlay show" : "overlay"}
+        onClick={closeMenu}
+        aria-hidden={!menuOpen}
+      />
 
-        <nav>
+      <aside className={menuOpen ? "sidebar open" : "sidebar"}>
+        <div className="sidebarTop">
+          <h2>SparkSocial</h2>
+          <button
+            className="iconBtn closeBtn"
+            type="button"
+            onClick={closeMenu}
+            aria-label="Close menu"
+          >
+            <IconClose />
+          </button>
+        </div>
+
+        <nav onClick={closeMenu}>
           <NavLink to="/inbox" end>
             Inbox
           </NavLink>
@@ -45,61 +147,23 @@ function Layout({ children }) {
       </aside>
 
       <main className="main">
-        <header className="header">Social Media Management</header>
+        <header className="header">
+          <button
+            className="iconBtn menuBtn"
+            type="button"
+            onClick={() => setMenuOpen(true)}
+            aria-label="Open menu"
+          >
+            <IconMenu />
+          </button>
+
+          <div className="headerTitle">Social Media Management</div>
+        </header>
+
         <div className="content">{children}</div>
       </main>
     </div>
   );
-}
-
-function clampText(text, max) {
-  const cleaned = (text || "").replace(/\s+/g, " ").trim();
-  if (!cleaned) return "";
-  if (cleaned.length <= max) return cleaned;
-  return cleaned.slice(0, max - 1) + "…";
-}
-
-function buildOutputs(blogText, tone) {
-  const titleGuess = clampText(blogText.split("\n")[0] || "", 80);
-  const summary = clampText(blogText, 240);
-  const baseHashtag = "#ITLeadership";
-
-  const professional = {
-    twitter: `${summary} ${baseHashtag}`.trim(),
-    facebook:
-      `I published a new article and wanted to share one takeaway:\n\n${summary}\n\nWhat’s your perspective on this?`,
-    linkedin:
-      `New article reflection:\n\n${summary}\n\nI’d value input from others who have worked through similar challenges.`,
-  };
-
-  const conversational = {
-    twitter: `${summary} What do you think?`.trim(),
-    facebook:
-      `Quick thought from something I wrote recently:\n\n${summary}\n\nIf you’ve been there too, I’d love to hear what you learned.`,
-    linkedin:
-      `Something I’ve been thinking about lately:\n\n${summary}\n\nWhat would you add from your experience?`,
-  };
-
-  const promotional = {
-    twitter: `New post: ${clampText(blogText, 200)} Read more soon.`,
-    facebook:
-      `New post is live.\n\n${summary}\n\nIf you want the full context, I’ll share the link next.`,
-    linkedin:
-      `New post published.\n\n${summary}\n\nIf you’d like to read it, I’m happy to share the link.`,
-  };
-
-  const map = {
-    professional,
-    conversational,
-    promotional,
-  };
-
-  const chosen = map[tone] || professional;
-
-  return {
-    ...chosen,
-    meta: { titleGuess },
-  };
 }
 
 function PreviewCard({ variant, body }) {
@@ -167,15 +231,9 @@ function PreviewCard({ variant, body }) {
   );
 }
 
-function PlatformBlock({
-  title,
-  value,
-  setValue,
-  rightSlot,
-  previewVariant,
-}) {
+function PlatformBlock({ title, value, setValue, rightSlot, previewVariant }) {
   return (
-    <div className="platformBlock">
+    <section className="platformBlock">
       <div className="platformHeader">
         <h3>{title}</h3>
         <div className="platformActions">{rightSlot}</div>
@@ -188,7 +246,7 @@ function PlatformBlock({
       />
 
       <PreviewCard variant={previewVariant} body={value} />
-    </div>
+    </section>
   );
 }
 
@@ -205,8 +263,6 @@ function Inbox() {
   async function copy(text) {
     if (!text) return;
     await navigator.clipboard.writeText(text);
-    // keep it simple; alerts can feel spammy later, but fine for now
-    alert("Copied to clipboard");
   }
 
   function generatePosts() {
@@ -237,7 +293,7 @@ function Inbox() {
 
   return (
     <div>
-      <h2>Blog → Social Media Generator</h2>
+      <h2 className="pageTitle">Blog → Social Media Generator</h2>
 
       <div className="toolbar">
         <div className="toolbarLeft">
