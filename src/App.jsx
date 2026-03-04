@@ -26,7 +26,76 @@ function Layout({ children }) {
 }
 
 function Inbox() {
-  return <div>Inbox (incoming blog posts will appear here)</div>;
+  const [blogText, setBlogText] = React.useState("");
+  const [twitter, setTwitter] = React.useState("");
+  const [facebook, setFacebook] = React.useState("");
+  const [linkedin, setLinkedin] = React.useState("");
+
+  function generatePosts() {
+    if (!blogText) return;
+
+    const summary = blogText.slice(0, 220);
+
+    setTwitter(summary + " #blog #insight");
+
+    setFacebook(
+      "I just shared a new article and wanted to highlight one thought:\n\n" +
+      summary +
+      "\n\nWhat do you think?"
+    );
+
+    setLinkedin(
+      "New article reflection:\n\n" +
+      summary +
+      "\n\nCurious how others approach this."
+    );
+  }
+
+  return (
+    <div>
+
+      <h2>Blog → Social Media Generator</h2>
+
+      <textarea
+        rows="10"
+        style={{ width: "100%", marginBottom: "15px" }}
+        placeholder="Paste your blog article or newsletter text here..."
+        value={blogText}
+        onChange={(e) => setBlogText(e.target.value)}
+      />
+
+      <button onClick={generatePosts}>
+        Generate Social Posts
+      </button>
+
+      <hr style={{ margin: "30px 0" }} />
+
+      <h3>Twitter / X</h3>
+      <textarea
+        rows="4"
+        style={{ width: "100%", marginBottom: "15px" }}
+        value={twitter}
+        readOnly
+      />
+
+      <h3>Facebook</h3>
+      <textarea
+        rows="4"
+        style={{ width: "100%", marginBottom: "15px" }}
+        value={facebook}
+        readOnly
+      />
+
+      <h3>LinkedIn</h3>
+      <textarea
+        rows="4"
+        style={{ width: "100%" }}
+        value={linkedin}
+        readOnly
+      />
+
+    </div>
+  );
 }
 function Drafts() {
   return <div>Drafts</div>;
