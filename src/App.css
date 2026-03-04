@@ -57,3 +57,29 @@ body {
   color: white;
   font-weight: 600;
 }
+
+.platformBlock {
+  margin-top: 20px;
+}
+
+.platformHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.platformActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.count {
+  font-size: 14px;
+  opacity: 0.8;
+}
+
+.count.over {
+  color: #ef4444;
+  font-weight: 700;
+}
