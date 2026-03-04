@@ -2,7 +2,6 @@ import React from "react";
 import { HashRouter, Routes, Route, NavLink } from "react-router-dom";
 import "./App.css";
 
-# Save and Load Draft
 import { openDB } from "idb";
 
 const DB_NAME = "sparksocial";
