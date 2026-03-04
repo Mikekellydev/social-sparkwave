@@ -12,10 +12,8 @@ body {
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
 }
 
-/* When the menu is open, prevent background scroll on mobile */
-body.menu-open {
-  overflow: hidden;
-}
+/* Prevent scroll when menu is open */
+body.menu-open { overflow: hidden; }
 
 /* App shell */
 .app {
@@ -26,15 +24,10 @@ body.menu-open {
 }
 
 /* Overlay for mobile drawer */
-.overlay {
-  display: none;
-}
+.overlay { display: none; }
+.overlay.show { display: none; }
 
-.overlay.show {
-  display: none;
-}
-
-/* Sidebar (desktop default) */
+/* Sidebar */
 .sidebar {
   width: 260px;
   padding: 18px 14px;
@@ -81,7 +74,7 @@ body.menu-open {
   color: rgba(233, 238, 245, 1);
 }
 
-/* Main area */
+/* Main */
 .main {
   flex: 1;
   min-width: 0;
@@ -119,19 +112,12 @@ body.menu-open {
   line-height: 0;
 }
 
-.iconBtn:hover {
-  background: rgba(255, 255, 255, 0.10);
-}
+.iconBtn:hover { background: rgba(255, 255, 255, 0.10); }
 
-.menuBtn {
-  display: none; /* shown on mobile */
-}
+.menuBtn { display: none; }
+.closeBtn { display: none; }
 
-.closeBtn {
-  display: none; /* shown on mobile inside drawer */
-}
-
-/* Content area */
+/* Content */
 .content {
   flex: 1;
   overflow: auto;
@@ -166,9 +152,7 @@ body.menu-open {
   gap: 10px;
 }
 
-.toolbarLabel {
-  font-weight: 800;
-}
+.toolbarLabel { font-weight: 800; }
 
 /* Inputs */
 select, button, textarea { font: inherit; }
@@ -193,9 +177,7 @@ button {
   white-space: nowrap;
 }
 
-button:hover {
-  background: rgba(80, 140, 220, 0.30);
-}
+button:hover { background: rgba(80, 140, 220, 0.30); }
 
 textarea {
   width: 100%;
@@ -210,13 +192,24 @@ textarea {
 
 .blogInput { margin-bottom: 18px; }
 
+/* Grid layout for platform blocks */
+.platformGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+/* LinkedIn is the 3rd platform block: full width on desktop */
+.platformGrid .platformBlock:nth-child(3) {
+  grid-column: span 2;
+}
+
 /* Platform blocks */
 .platformBlock {
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 18px;
   padding: 16px;
-  margin-bottom: 18px;
 }
 
 .platformHeader {
@@ -240,15 +233,8 @@ textarea {
   gap: 10px;
 }
 
-.count {
-  font-weight: 800;
-  opacity: 0.85;
-}
-
-.count.over {
-  color: #ff6b6b;
-  opacity: 1;
-}
+.count { font-weight: 800; opacity: 0.85; }
+.count.over { color: #ff6b6b; opacity: 1; }
 
 /* Preview cards */
 .previewCard {
@@ -287,21 +273,10 @@ textarea {
 
 .displayName { font-weight: 900; }
 
-.handle {
-  opacity: 0.7;
-  font-weight: 700;
-}
+.handle { opacity: 0.7; font-weight: 700; }
 
-.metaRow {
-  opacity: 0.7;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.metaDot {
-  opacity: 0.6;
-  font-weight: 900;
-}
+.metaRow { opacity: 0.7; font-size: 12px; font-weight: 700; }
+.metaDot { opacity: 0.6; font-weight: 900; }
 
 .previewBody {
   white-space: pre-wrap;
@@ -321,9 +296,17 @@ textarea {
 }
 
 /* Tablet */
-@media (max-width: 1024px) {
+@media (max-width: 1000px) {
   .sidebar { width: 220px; }
   .content { padding: 18px; }
+
+  .platformGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .platformGrid .platformBlock:nth-child(3) {
+    grid-column: span 1;
+  }
 }
 
 /* Mobile drawer */
@@ -345,9 +328,7 @@ textarea {
     border-right: 1px solid rgba(255, 255, 255, 0.10);
   }
 
-  .sidebar.open {
-    transform: translateX(0);
-  }
+  .sidebar.open { transform: translateX(0); }
 
   .overlay {
     position: fixed;
@@ -357,17 +338,11 @@ textarea {
     display: none;
   }
 
-  .overlay.show {
-    display: block;
-  }
+  .overlay.show { display: block; }
 
-  .content {
-    padding: 14px;
-  }
+  .content { padding: 14px; }
 
-  .headerTitle {
-    font-size: 16px;
-  }
+  .headerTitle { font-size: 16px; }
 }
 
 /* Small phones */

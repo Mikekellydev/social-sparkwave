@@ -62,13 +62,7 @@ function buildOutputs(blogText, tone) {
 
 function IconMenu() {
   return (
-    <svg
-      width="22"
-      height="22"
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-      focusable="false"
-    >
+    <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
       <path
         fill="currentColor"
         d="M3 6.5c0-.55.45-1 1-1h16a1 1 0 1 1 0 2H4c-.55 0-1-.45-1-1Zm0 5.5c0-.55.45-1 1-1h16a1 1 0 1 1 0 2H4c-.55 0-1-.45-1-1Zm1 4.5a1 1 0 1 0 0 2h16a1 1 0 1 0 0-2H4Z"
@@ -79,13 +73,7 @@ function IconMenu() {
 
 function IconClose() {
   return (
-    <svg
-      width="22"
-      height="22"
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-      focusable="false"
-    >
+    <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
       <path
         fill="currentColor"
         d="M18.3 5.71a1 1 0 0 0-1.41 0L12 10.59 7.11 5.7A1 1 0 0 0 5.7 7.11L10.59 12l-4.9 4.89a1 1 0 1 0 1.41 1.42L12 13.41l4.89 4.9a1 1 0 0 0 1.42-1.41L13.41 12l4.9-4.89a1 1 0 0 0-.01-1.4Z"
@@ -318,36 +306,38 @@ function Inbox() {
         onChange={(e) => setBlogText(e.target.value)}
       />
 
-      <PlatformBlock
-        title="Twitter / X"
-        value={twitter}
-        setValue={setTwitter}
-        previewVariant="x"
-        rightSlot={
-          <>
-            <span className={twitterOver ? "count over" : "count"}>
-              {twitterCount}/280
-            </span>
-            <button onClick={() => copy(twitter)}>Copy</button>
-          </>
-        }
-      />
+      <div className="platformGrid">
+        <PlatformBlock
+          title="Twitter / X"
+          value={twitter}
+          setValue={setTwitter}
+          previewVariant="x"
+          rightSlot={
+            <>
+              <span className={twitterOver ? "count over" : "count"}>
+                {twitterCount}/280
+              </span>
+              <button onClick={() => copy(twitter)}>Copy</button>
+            </>
+          }
+        />
 
-      <PlatformBlock
-        title="Facebook"
-        value={facebook}
-        setValue={setFacebook}
-        previewVariant="fb"
-        rightSlot={<button onClick={() => copy(facebook)}>Copy</button>}
-      />
+        <PlatformBlock
+          title="Facebook"
+          value={facebook}
+          setValue={setFacebook}
+          previewVariant="fb"
+          rightSlot={<button onClick={() => copy(facebook)}>Copy</button>}
+        />
 
-      <PlatformBlock
-        title="LinkedIn"
-        value={linkedin}
-        setValue={setLinkedin}
-        previewVariant="li"
-        rightSlot={<button onClick={() => copy(linkedin)}>Copy</button>}
-      />
+        <PlatformBlock
+          title="LinkedIn"
+          value={linkedin}
+          setValue={setLinkedin}
+          previewVariant="li"
+          rightSlot={<button onClick={() => copy(linkedin)}>Copy</button>}
+        />
+      </div>
     </div>
   );
 }
