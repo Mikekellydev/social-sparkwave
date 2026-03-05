@@ -1,737 +1,831 @@
-import React from "react";
-import { HashRouter, Routes, Route, NavLink, Navigate } from "react-router-dom";
+// src/App.jsx
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { HashRouter, NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import "./App.css";
-import { openDB } from "idb";
 
 /**
- * SparkSocial
- * Inbox: generate platform drafts from blog text
- * Drafts: save multiple drafts, view, load into Inbox, delete
- *
- * Persistence:
- * - IndexedDB primary
- * - localStorage fallback (so Save never "just fails")
+ * Storage (localStorage) for drafts
+ * Avoids IndexedDB version issues (VersionError) entirely.
  */
+const STORAGE_KEY = "sparksocial:drafts:v1";
 
-/* ----------------------------- Storage Layer ----------------------------- */
-
-const DB_NAME = "sparksocial";
-const DB_VERSION = 3; // bump when schema changes to avoid VersionError
-const STORE_CURRENT = "current"; // single autosave slot
-const STORE_DRAFTS = "drafts"; // multiple saved drafts
-const KEY_CURRENT = "current";
-
-async function getDb() {
-  return openDB(DB_NAME, DB_VERSION, {
-    upgrade(db) {
-      // current autosave store
-      if (!db.objectStoreNames.contains(STORE_CURRENT)) {
-        db.createObjectStore(STORE_CURRENT);
-      }
-      // drafts store with keyPath
-      if (!db.objectStoreNames.contains(STORE_DRAFTS)) {
-        db.createObjectStore(STORE_DRAFTS, { keyPath: "id" });
-      }
-    },
-  });
-}
-
-function safeJsonParse(v) {
+function loadDrafts() {
   try {
-    return JSON.parse(v);
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
-    return null;
+    return [];
   }
 }
 
-function lsKeyCurrent() {
-  return `${DB_NAME}:${STORE_CURRENT}:${KEY_CURRENT}`;
+function saveDrafts(drafts) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(drafts));
 }
 
-function lsKeyDrafts() {
-  return `${DB_NAME}:${STORE_DRAFTS}`;
+function newId() {
+  return `${Date.now()}_${Math.random().toString(16).slice(2)}`;
 }
 
-async function saveCurrent(payload) {
-  try {
-    const db = await getDb();
-    await db.put(STORE_CURRENT, payload, KEY_CURRENT);
-    return { ok: true };
-  } catch (e) {
-    // fallback
-    try {
-      localStorage.setItem(lsKeyCurrent(), JSON.stringify(payload));
-      return { ok: true, fallback: true };
-    } catch (e2) {
-      return { ok: false, error: e2 || e };
-    }
+function clampText(text, maxChars) {
+  if (!text) return "";
+  if (text.length <= maxChars) return text;
+  return text.slice(0, maxChars - 1) + "…";
+}
+
+function buildPostsFromBlog(blogText, tone) {
+  const base = (blogText || "").trim();
+
+  if (!base) {
+    return {
+      x: "",
+      facebook: "",
+      linkedin: "",
+    };
   }
+
+  // Lightweight generation that is deterministic and works offline.
+  // You can replace this later with an API call if you want.
+  const takeaways = base
+    .replace(/\s+/g, " ")
+    .split(". ")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  const first = takeaways[0] || base;
+  const second = takeaways[1] || "";
+  const third = takeaways[2] || "";
+
+  const toneTag =
+    tone === "Professional"
+      ? "Professional"
+      : tone === "Friendly"
+      ? "Friendly"
+      : tone === "Bold"
+      ? "Bold"
+      : "Professional";
+
+  const x = clampText(
+    `${first}${second ? " " + clampText(second, 80) : ""} #ITLeadership`,
+    280
+  );
+
+  const facebook = clampText(
+    `I published a new article and wanted to share one takeaway.\n\n${first}\n\nWhat is your perspective on this?\n\n(${toneTag})`,
+    1200
+  );
+
+  const linkedin = clampText(
+    `New article reflection:\n\n${first}${third ? "\n\n" + third : ""}\n\nI would value input from others who have worked through similar challenges.\n\n(${toneTag})`,
+    2000
+  );
+
+  return { x, facebook, linkedin };
 }
 
-async function loadCurrent() {
-  try {
-    const db = await getDb();
-    const v = await db.get(STORE_CURRENT, KEY_CURRENT);
-    if (v) return { ok: true, value: v };
-  } catch {
-    // ignore and fallback
-  }
-  const ls = localStorage.getItem(lsKeyCurrent());
-  const parsed = ls ? safeJsonParse(ls) : null;
-  return { ok: true, value: parsed || null, fallback: !!parsed };
-}
-
-async function listDrafts() {
-  try {
-    const db = await getDb();
-    const all = await db.getAll(STORE_DRAFTS);
-    // newest first
-    all.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-    return { ok: true, value: all };
-  } catch (e) {
-    // fallback to localStorage
-    const ls = localStorage.getItem(lsKeyDrafts());
-    const parsed = ls ? safeJsonParse(ls) : [];
-    if (Array.isArray(parsed)) {
-      parsed.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-      return { ok: true, value: parsed, fallback: true };
-    }
-    return { ok: false, error: e };
-  }
-}
-
-async function upsertDraft(draft) {
-  try {
-    const db = await getDb();
-    await db.put(STORE_DRAFTS, draft);
-    return { ok: true };
-  } catch (e) {
-    // localStorage fallback: keep array
-    try {
-      const ls = localStorage.getItem(lsKeyDrafts());
-      const parsed = ls ? safeJsonParse(ls) : [];
-      const arr = Array.isArray(parsed) ? parsed : [];
-      const idx = arr.findIndex((x) => x.id === draft.id);
-      if (idx >= 0) arr[idx] = draft;
-      else arr.unshift(draft);
-      localStorage.setItem(lsKeyDrafts(), JSON.stringify(arr));
-      return { ok: true, fallback: true };
-    } catch (e2) {
-      return { ok: false, error: e2 || e };
-    }
-  }
-}
-
-async function deleteDraft(id) {
-  try {
-    const db = await getDb();
-    await db.delete(STORE_DRAFTS, id);
-    return { ok: true };
-  } catch (e) {
-    // localStorage fallback
-    try {
-      const ls = localStorage.getItem(lsKeyDrafts());
-      const parsed = ls ? safeJsonParse(ls) : [];
-      const arr = Array.isArray(parsed) ? parsed : [];
-      const next = arr.filter((x) => x.id !== id);
-      localStorage.setItem(lsKeyDrafts(), JSON.stringify(next));
-      return { ok: true, fallback: true };
-    } catch (e2) {
-      return { ok: false, error: e2 || e };
-    }
-  }
-}
-
-async function wipeAllStorage() {
-  // optional utility if you ever want a "Reset Storage" later
-  try {
-    const db = await getDb();
-    const tx = db.transaction([STORE_CURRENT, STORE_DRAFTS], "readwrite");
-    await tx.objectStore(STORE_CURRENT).clear();
-    await tx.objectStore(STORE_DRAFTS).clear();
-    await tx.done;
-  } catch {
-    // ignore
-  }
-  try {
-    localStorage.removeItem(lsKeyCurrent());
-    localStorage.removeItem(lsKeyDrafts());
-  } catch {
-    // ignore
-  }
-}
-
-/* ----------------------------- Text Utilities ---------------------------- */
-
-function clampText(text, max) {
-  const cleaned = (text || "").replace(/\s+/g, " ").trim();
-  if (!cleaned) return "";
-  if (cleaned.length <= max) return cleaned;
-  return cleaned.slice(0, max - 1) + "…";
-}
-
-const LIMITS = {
-  x: 280,
-  facebook: 2000,
-  linkedin: 2000,
-};
-
-function buildOutputs(blogText, tone) {
-  const firstLine = (blogText || "").split("\n")[0] || "";
-  const titleGuess = clampText(firstLine, 80);
-  const summary = clampText(blogText, 240);
-  const baseHashtag = "#ITLeadership";
-
-  const professional = {
-    twitter: `${summary} ${baseHashtag}`.trim(),
-    facebook: `I published a new article and wanted to share one takeaway:\n\n${summary}\n\nWhat’s your perspective on this?`,
-    linkedin: `New article reflection:\n\n${summary}\n\nI’d value input from others who have worked through similar challenges.`,
-  };
-
-  const conversational = {
-    twitter: `${summary} What do you think?`.trim(),
-    facebook: `Quick thought from something I wrote recently:\n\n${summary}\n\nIf you’ve been there too, I’d love to hear what you learned.`,
-    linkedin: `Something I’ve been thinking about lately:\n\n${summary}\n\nWhat would you add from your experience?`,
-  };
-
-  const promotional = {
-    twitter: `New post: ${clampText(blogText, 200)} Read more soon.`,
-    facebook: `New post is live.\n\n${summary}\n\nIf you want the full context, I’ll share the link next.`,
-    linkedin: `New post published.\n\n${summary}\n\nIf you’d like to read it, I’m happy to share the link.`,
-  };
-
-  const map = { professional, conversational, promotional };
-  const chosen = map[tone] || professional;
-
-  return {
-    ...chosen,
-    meta: { titleGuess },
-  };
-}
-
-async function copyToClipboard(text) {
+function copyToClipboard(text) {
   if (!text) return;
-  // clipboard API requires https (GitHub Pages is fine)
-  await navigator.clipboard.writeText(text);
+  navigator.clipboard?.writeText(text).catch(() => {});
 }
 
-/* ------------------------------- UI Pieces ------------------------------- */
+function Pill({ state }) {
+  // state: "ready" | "saved" | "failed"
+  const className =
+    state === "saved"
+      ? "pill pillSaved"
+      : state === "failed"
+      ? "pill pillFailed"
+      : "pill pillReady";
 
-function Layout({ children }) {
-  const [navOpen, setNavOpen] = React.useState(false);
+  const label = state === "saved" ? "Saved" : state === "failed" ? "Save failed" : "Ready";
 
-  // close drawer on route clicks (mobile)
-  function onNavClick() {
-    setNavOpen(false);
-  }
+  return <span className={className}>{label}</span>;
+}
+
+function Layout({ children, onToggleSidebar, sidebarOpen, setSidebarOpen }) {
+  const location = useLocation();
+
+  useEffect(() => {
+    // Close sidebar after navigation on mobile
+    setSidebarOpen(false);
+  }, [location.pathname, setSidebarOpen]);
 
   return (
-    <div className={`app ${navOpen ? "navOpen" : ""}`}>
-      {/* Mobile top bar */}
-      <div className="mobileTopbar">
-        <button
-          className="iconButton"
-          aria-label="Open menu"
-          onClick={() => setNavOpen(true)}
-        >
-          ☰
-        </button>
-        <div className="mobileTitle">Social Media Management</div>
-      </div>
+    <div className="app">
+      {sidebarOpen ? <div className="backdrop" onClick={() => setSidebarOpen(false)} /> : null}
 
-      {/* Backdrop for mobile drawer */}
-      <button
-        className="navBackdrop"
-        aria-label="Close menu"
-        onClick={() => setNavOpen(false)}
-      />
+      <aside className={`sidebar ${sidebarOpen ? "isOpen" : ""}`}>
+        <div className="sidebarInner">
+          <div className="brand">
+            <div className="brandMark">S</div>
+            <div>
+              <h1>SparkSocial</h1>
+              <div className="tag">Social Media Management</div>
+            </div>
+          </div>
 
-      <aside className="sidebar">
-        <div className="sidebarTop">
-          <h2>SparkSocial</h2>
-          <button
-            className="iconButton closeButton"
-            aria-label="Close menu"
-            onClick={() => setNavOpen(false)}
-          >
-            ✕
-          </button>
+          <nav className="nav">
+            <NavLink to="/inbox" className={({ isActive }) => (isActive ? "active" : undefined)}>
+              Inbox
+            </NavLink>
+            <NavLink to="/drafts" className={({ isActive }) => (isActive ? "active" : undefined)}>
+              Drafts
+            </NavLink>
+            <NavLink to="/scheduler" className={({ isActive }) => (isActive ? "active" : undefined)}>
+              Scheduler
+            </NavLink>
+            <NavLink
+              to="/connections"
+              className={({ isActive }) => (isActive ? "active" : undefined)}
+            >
+              Connections
+            </NavLink>
+            <NavLink to="/logs" className={({ isActive }) => (isActive ? "active" : undefined)}>
+              Logs
+            </NavLink>
+          </nav>
         </div>
-
-        <nav>
-          <NavLink to="/inbox" end onClick={onNavClick}>
-            Inbox
-          </NavLink>
-          <NavLink to="/drafts" onClick={onNavClick}>
-            Drafts
-          </NavLink>
-          <NavLink to="/scheduler" onClick={onNavClick}>
-            Scheduler
-          </NavLink>
-          <NavLink to="/connections" onClick={onNavClick}>
-            Connections
-          </NavLink>
-          <NavLink to="/logs" onClick={onNavClick}>
-            Logs
-          </NavLink>
-        </nav>
       </aside>
 
-      <main className="main">
+      <main className="content">
         <header className="header">
-          <div className="headerTitle">Social Media Management</div>
-          <div className="headerGlow" aria-hidden="true" />
+          <div className="headerInner">
+            <button className="btn hamburger" onClick={onToggleSidebar} aria-label="Open menu">
+              ☰
+            </button>
+
+            <div style={{ display: "flex", alignItems: "baseline", gap: 10, minWidth: 0 }}>
+              <div style={{ fontWeight: 950, fontSize: 18, letterSpacing: 0.2, whiteSpace: "nowrap" }}>
+                Social Media Management
+              </div>
+              <div className="muted" style={{ fontSize: 13, overflow: "hidden", textOverflow: "ellipsis" }}>
+                Blog to Social Media Generator
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+              <a className="btn btnGlow" href="#/inbox">
+                Generator
+              </a>
+            </div>
+          </div>
+
+          <div className="hero">
+            <div>
+              <h2 className="heroTitle">Turn one blog into platform ready posts</h2>
+              <p className="heroSub">
+                Paste your article once, generate posts for X, Facebook, and LinkedIn. Save drafts locally so
+                nothing breaks on refresh.
+              </p>
+              <div className="heroCtas">
+                <a className="btn btnPrimary" href="#/inbox">
+                  Open Generator
+                </a>
+                <a className="btn" href="#/drafts">
+                  View Drafts
+                </a>
+              </div>
+            </div>
+
+            <div className="heroPanel">
+              <div className="heroStat">
+                <div className="k">Character limits</div>
+                <div className="v">280 · 1200 · 2000</div>
+                <div className="hint">X, Facebook, LinkedIn</div>
+              </div>
+            </div>
+          </div>
         </header>
 
-        <div className="content">{children}</div>
+        {children}
       </main>
     </div>
   );
 }
 
-function PreviewCard({ variant, body }) {
-  // Show the whole post in preview (no truncation)
-  const safe = body || "Preview will appear here.";
+function InboxPage({ drafts, setDrafts }) {
+  const [tone, setTone] = useState("Professional");
+  const [pillState, setPillState] = useState("ready"); // ready | saved | failed
 
-  if (variant === "x") {
-    return (
-      <div className="previewCard x">
-        <div className="previewTop">
-          <div className="avatar">S</div>
-          <div>
-            <div className="nameRow">
-              <span className="displayName">SparkSocial</span>
-              <span className="handle">@sparkwaveitservice</span>
-            </div>
-            <div className="metaRow">Just now</div>
-          </div>
-        </div>
-        <div className="previewBody">{safe}</div>
-      </div>
-    );
-  }
+  const [blogText, setBlogText] = useState("");
+  const [xText, setXText] = useState("");
+  const [fbText, setFbText] = useState("");
+  const [liText, setLiText] = useState("");
 
-  if (variant === "fb") {
-    return (
-      <div className="previewCard fb">
-        <div className="previewTop">
-          <div className="avatar">S</div>
-          <div>
-            <div className="nameRow">
-              <span className="displayName">SparkSocial</span>
-              <span className="metaDot">·</span>
-              <span className="metaRow">Just now</span>
-            </div>
-            <div className="metaRow">Public</div>
-          </div>
-        </div>
-        <div className="previewBody">{safe}</div>
-        <div className="previewFooter">
-          <span>Like</span>
-          <span>Comment</span>
-          <span>Share</span>
-        </div>
-      </div>
-    );
-  }
+  const xLimit = 280;
+  const fbLimit = 1200;
+  const liLimit = 2000;
 
-  return (
-    <div className="previewCard li">
-      <div className="previewTop">
-        <div className="avatar">S</div>
-        <div>
-          <div className="nameRow">
-            <span className="displayName">SparkSocial</span>
-          </div>
-          <div className="metaRow">IT Services · Just now</div>
-        </div>
-      </div>
-      <div className="previewBody">{safe}</div>
-      <div className="previewFooter">
-        <span>Like</span>
-        <span>Comment</span>
-        <span>Repost</span>
-        <span>Send</span>
-      </div>
-    </div>
-  );
-}
+  const generate = () => {
+    const { x, facebook, linkedin } = buildPostsFromBlog(blogText, tone);
+    setXText(x);
+    setFbText(facebook);
+    setLiText(linkedin);
+    setPillState("ready");
+  };
 
-function CounterPill({ value, limit }) {
-  const count = (value || "").length;
-  const over = count > limit;
-  return (
-    <span className={`countPill ${over ? "over" : ""}`}>
-      {count}/{limit}
-    </span>
-  );
-}
-
-function PlatformCard({
-  title,
-  value,
-  setValue,
-  limit,
-  previewVariant,
-  onCopy,
-}) {
-  return (
-    <section className="platformCard">
-      <div className="platformHeader">
-        <h3>{title}</h3>
-        <div className="platformActions">
-          <CounterPill value={value} limit={limit} />
-          <button className="btnSecondary" onClick={onCopy}>
-            Copy
-          </button>
-        </div>
-      </div>
-
-      <textarea
-        className="platformTextarea"
-        rows={5}
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-      />
-
-      <PreviewCard variant={previewVariant} body={value} />
-    </section>
-  );
-}
-
-/* --------------------------------- Pages -------------------------------- */
-
-function Inbox() {
-  const [tone, setTone] = React.useState("professional");
-  const [blogText, setBlogText] = React.useState("");
-  const [twitter, setTwitter] = React.useState("");
-  const [facebook, setFacebook] = React.useState("");
-  const [linkedin, setLinkedin] = React.useState("");
-
-  const [draftStatus, setDraftStatus] = React.useState("Ready");
-  const [toast, setToast] = React.useState("");
-
-  function showToast(msg) {
-    setToast(msg);
-    window.clearTimeout(showToast._t);
-    showToast._t = window.setTimeout(() => setToast(""), 1600);
-  }
-
-  function generatePosts() {
-    if (!blogText.trim()) {
-      showToast("Paste blog text first");
-      return;
-    }
-    const out = buildOutputs(blogText, tone);
-    setTwitter(out.twitter);
-    setFacebook(out.facebook);
-    setLinkedin(out.linkedin);
-    showToast("Generated");
-  }
-
-  async function saveToDrafts() {
-    const id =
-      typeof crypto !== "undefined" && crypto.randomUUID
-        ? crypto.randomUUID()
-        : `draft_${Date.now()}_${Math.random().toString(16).slice(2)}`;
-
-    const firstLine = (blogText || "").split("\n")[0] || "";
-    const title = clampText(firstLine.trim() || "Untitled draft", 80);
-
-    const draft = {
-      id,
-      title,
-      tone,
-      blogText,
-      twitter,
-      facebook,
-      linkedin,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    };
-
-    setDraftStatus("Saving…");
-    const res = await upsertDraft(draft);
-    if (res.ok) {
-      setDraftStatus("Saved");
-      showToast(res.fallback ? "Saved (fallback)" : "Saved to Drafts");
-      window.setTimeout(() => setDraftStatus("Ready"), 1400);
-    } else {
-      console.error("Draft save failed:", res.error);
-      setDraftStatus("Save failed");
-      showToast("Save failed");
-      window.setTimeout(() => setDraftStatus("Ready"), 1600);
-    }
-  }
-
-  async function onCopy(text) {
+  const saveToDrafts = () => {
     try {
-      await copyToClipboard(text);
-      showToast("Copied");
-    } catch (e) {
-      console.error(e);
-      showToast("Copy failed");
-    }
-  }
+      const now = new Date().toISOString();
+      const item = {
+        id: newId(),
+        createdAt: now,
+        updatedAt: now,
+        tone,
+        blogText,
+        xText,
+        fbText,
+        liText,
+        title: deriveTitle(blogText, tone),
+      };
 
-  // load saved current draft on first render
-  React.useEffect(() => {
-    (async () => {
-      const res = await loadCurrent();
-      const saved = res.value;
-      if (!saved) return;
-      setTone(saved.tone || "professional");
-      setBlogText(saved.blogText || "");
-      setTwitter(saved.twitter || "");
-      setFacebook(saved.facebook || "");
-      setLinkedin(saved.linkedin || "");
-    })();
-  }, []);
-
-  // autosave "current" (not the Drafts list) whenever things change
-  React.useEffect(() => {
-    (async () => {
-      const payload = { tone, blogText, twitter, facebook, linkedin };
-      const res = await saveCurrent(payload);
-      if (!res.ok) {
-        console.error("Autosave failed:", res.error);
-        setDraftStatus("Autosave failed");
-        window.setTimeout(() => setDraftStatus("Ready"), 1800);
-      }
-    })();
-  }, [tone, blogText, twitter, facebook, linkedin]);
-
-  return (
-    <div>
-      <h2>Blog → Social Media Generator</h2>
-
-      <div className="toolbar">
-        <div className="toolbarLeft">
-          <label className="toolbarLabel">Tone</label>
-          <select value={tone} onChange={(e) => setTone(e.target.value)}>
-            <option value="professional">Professional</option>
-            <option value="conversational">Conversational</option>
-            <option value="promotional">Promotional</option>
-          </select>
-
-          <span className="statusPill" title="Draft status">
-            {draftStatus}
-          </span>
-        </div>
-
-        <div className="toolbarRight">
-          <button className="btnSecondary" onClick={saveToDrafts}>
-            Save to Drafts
-          </button>
-          <button className="btnPrimary" onClick={generatePosts}>
-            Generate
-          </button>
-        </div>
-      </div>
-
-      <textarea
-        className="blogInput"
-        rows={10}
-        placeholder="Paste your blog article or newsletter text here..."
-        value={blogText}
-        onChange={(e) => setBlogText(e.target.value)}
-      />
-
-      <div className="platformGrid">
-        <PlatformCard
-          title="Twitter / X"
-          value={twitter}
-          setValue={setTwitter}
-          limit={LIMITS.x}
-          previewVariant="x"
-          onCopy={() => onCopy(twitter)}
-        />
-
-        <PlatformCard
-          title="Facebook"
-          value={facebook}
-          setValue={setFacebook}
-          limit={LIMITS.facebook}
-          previewVariant="fb"
-          onCopy={() => onCopy(facebook)}
-        />
-
-        <PlatformCard
-          title="LinkedIn"
-          value={linkedin}
-          setValue={setLinkedin}
-          limit={LIMITS.linkedin}
-          previewVariant="li"
-          onCopy={() => onCopy(linkedin)}
-        />
-      </div>
-
-      {/* small toast */}
-      {toast ? <div className="toast">{toast}</div> : null}
-    </div>
-  );
-}
-
-function Drafts() {
-  const [items, setItems] = React.useState([]);
-  const [loading, setLoading] = React.useState(true);
-  const [toast, setToast] = React.useState("");
-
-  function showToast(msg) {
-    setToast(msg);
-    window.clearTimeout(showToast._t);
-    showToast._t = window.setTimeout(() => setToast(""), 1600);
-  }
-
-  async function refresh() {
-    setLoading(true);
-    const res = await listDrafts();
-    if (res.ok) setItems(res.value || []);
-    else console.error(res.error);
-    setLoading(false);
-  }
-
-  React.useEffect(() => {
-    refresh();
-  }, []);
-
-  function formatDate(ts) {
-    if (!ts) return "";
-    try {
-      return new Date(ts).toLocaleString();
+      const next = [item, ...drafts];
+      setDrafts(next);
+      saveDrafts(next);
+      setPillState("saved");
     } catch {
-      return "";
+      setPillState("failed");
     }
-  }
+  };
 
-  async function onDelete(id) {
-    const res = await deleteDraft(id);
-    if (res.ok) {
-      showToast("Deleted");
-      refresh();
-    } else {
-      console.error(res.error);
-      showToast("Delete failed");
-    }
-  }
-
-  async function onLoadToInbox(draft) {
-    // set current and let Inbox load it on next visit
-    const payload = {
-      tone: draft.tone || "professional",
-      blogText: draft.blogText || "",
-      twitter: draft.twitter || "",
-      facebook: draft.facebook || "",
-      linkedin: draft.linkedin || "",
-    };
-    const res = await saveCurrent(payload);
-    if (res.ok) {
-      showToast("Loaded into Inbox");
-      // optional: also scroll to top
-      window.location.hash = "#/inbox";
-    } else {
-      console.error(res.error);
-      showToast("Load failed");
-    }
-  }
-
-  async function onDuplicate(draft) {
-    const id =
-      typeof crypto !== "undefined" && crypto.randomUUID
-        ? crypto.randomUUID()
-        : `draft_${Date.now()}_${Math.random().toString(16).slice(2)}`;
-
-    const copy = {
-      ...draft,
-      id,
-      title: `${draft.title || "Untitled"} (copy)`,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    };
-
-    const res = await upsertDraft(copy);
-    if (res.ok) {
-      showToast("Duplicated");
-      refresh();
-    } else {
-      console.error(res.error);
-      showToast("Duplicate failed");
-    }
-  }
+  useEffect(() => {
+    // Keep pill sane when typing
+    setPillState("ready");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tone, blogText, xText, fbText, liText]);
 
   return (
-    <div>
-      <div className="pageHeaderRow">
-        <h2>Drafts</h2>
-        <button className="btnSecondary" onClick={refresh}>
-          Refresh
-        </button>
-      </div>
-
-      {loading ? (
-        <div className="muted">Loading drafts…</div>
-      ) : items.length === 0 ? (
-        <div className="muted">
-          No drafts yet. Go to Inbox and click “Save to Drafts”.
+    <div className="page">
+      <section className="section">
+        <div className="sectionHeader">
+          <div>
+            <h2 className="sectionTitle">Blog to Social Media Generator</h2>
+            <p className="sectionDesc">
+              Paste your blog article or newsletter text, then generate platform posts. Save to Drafts stores it
+              on this device.
+            </p>
+          </div>
         </div>
-      ) : (
-        <div className="draftList">
-          {items.map((d) => (
-            <div className="draftRow" key={d.id}>
-              <div className="draftInfo">
-                <div className="draftTitle">{d.title || "Untitled draft"}</div>
-                <div className="draftMeta">
-                  <span className="chip">{d.tone || "professional"}</span>
-                  <span className="muted">
-                    {formatDate(d.updatedAt || d.createdAt)}
-                  </span>
+
+        <div className="card">
+          <div className="cardInner">
+            <div className="generatorTopRow">
+              <div className="generatorControls">
+                <div style={{ fontWeight: 900 }}>Tone</div>
+                <select value={tone} onChange={(e) => setTone(e.target.value)}>
+                  <option>Professional</option>
+                  <option>Friendly</option>
+                  <option>Bold</option>
+                </select>
+
+                <Pill state={pillState} />
+              </div>
+
+              <div className="actions">
+                <button className="btn" onClick={saveToDrafts}>
+                  Save to Drafts
+                </button>
+                <button className="btn btnPrimary" onClick={generate}>
+                  Generate
+                </button>
+              </div>
+            </div>
+
+            <div style={{ marginTop: 12 }}>
+              <textarea
+                value={blogText}
+                onChange={(e) => setBlogText(e.target.value)}
+                placeholder="Paste your blog article or newsletter text here…"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="section" style={{ marginTop: 4 }}>
+        <div className="platformGrid">
+          {/* X */}
+          <div className="card cardHover platformCard platformX">
+            <div className="cardInner">
+              <div className="platformHeader">
+                <h3>Twitter / X</h3>
+                <div className="counter">
+                  {(xText || "").length}/{xLimit}
+                </div>
+                <button className="btn copyBtn" onClick={() => copyToClipboard(xText)}>
+                  Copy
+                </button>
+              </div>
+
+              <textarea
+                value={xText}
+                onChange={(e) => setXText(clampText(e.target.value, xLimit))}
+                placeholder="X post output…"
+              />
+
+              <div className="previewWrap">
+                <div className="previewCard">
+                  <div className="previewMeta">
+                    <div className="avatar">S</div>
+                    <div>
+                      <div style={{ fontWeight: 900 }}>SparkSocial</div>
+                      <div className="muted">@sparkwaveitservice · Just now</div>
+                    </div>
+                  </div>
+                  <p className="previewText">{xText || "Preview will show here."}</p>
                 </div>
               </div>
+            </div>
+          </div>
 
-              <div className="draftActions">
-                <button className="btnSecondary" onClick={() => onLoadToInbox(d)}>
-                  Load to Inbox
+          {/* Facebook */}
+          <div className="card cardHover platformCard platformFB">
+            <div className="cardInner">
+              <div className="platformHeader">
+                <h3>Facebook</h3>
+                <div className="counter">
+                  {(fbText || "").length}/{fbLimit}
+                </div>
+                <button className="btn copyBtn" onClick={() => copyToClipboard(fbText)}>
+                  Copy
                 </button>
-                <button className="btnSecondary" onClick={() => onDuplicate(d)}>
-                  Duplicate
+              </div>
+
+              <textarea
+                value={fbText}
+                onChange={(e) => setFbText(clampText(e.target.value, fbLimit))}
+                placeholder="Facebook post output…"
+              />
+
+              <div className="previewWrap">
+                <div className="previewCard">
+                  <div className="previewMeta">
+                    <div className="avatar">S</div>
+                    <div>
+                      <div style={{ fontWeight: 900 }}>SparkSocial</div>
+                      <div className="muted">Public · Just now</div>
+                    </div>
+                  </div>
+                  <p className="previewText">{fbText || "Preview will show here."}</p>
+                  <div className="muted" style={{ marginTop: 10, fontWeight: 850 }}>
+                    Like · Comment · Share
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* LinkedIn full width */}
+          <div className="card cardHover platformCard platformLI">
+            <div className="cardInner">
+              <div className="platformHeader">
+                <h3>LinkedIn</h3>
+                <div className="counter">
+                  {(liText || "").length}/{liLimit}
+                </div>
+                <button className="btn copyBtn" onClick={() => copyToClipboard(liText)}>
+                  Copy
                 </button>
-                <button className="btnDanger" onClick={() => onDelete(d.id)}>
-                  Delete
+              </div>
+
+              <textarea
+                value={liText}
+                onChange={(e) => setLiText(clampText(e.target.value, liLimit))}
+                placeholder="LinkedIn post output…"
+              />
+
+              <div className="previewWrap">
+                <div className="previewCard">
+                  <div className="previewMeta">
+                    <div className="avatar">S</div>
+                    <div>
+                      <div style={{ fontWeight: 900 }}>SparkSocial</div>
+                      <div className="muted">IT Services · Just now</div>
+                    </div>
+                  </div>
+                  <p className="previewText">{liText || "Preview will show here."}</p>
+                  <div className="muted" style={{ marginTop: 10, fontWeight: 850 }}>
+                    Like · Comment · Repost · Send
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function DraftsPage({ drafts, setDrafts, onLoadDraft }) {
+  return (
+    <div className="page">
+      <section className="section">
+        <div className="sectionHeader">
+          <div>
+            <h2 className="sectionTitle">Drafts</h2>
+            <p className="sectionDesc">
+              Saved locally in your browser. Click one to load it back into the generator.
+            </p>
+          </div>
+        </div>
+
+        {drafts.length === 0 ? (
+          <div className="card">
+            <div className="cardInner">
+              <p className="muted" style={{ margin: 0 }}>
+                No drafts yet. Save one from the Generator.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: "grid", gap: 14 }}>
+            {drafts.map((d) => (
+              <div key={d.id} className="card cardHover">
+                <div className="cardInner" style={{ display: "grid", gap: 10 }}>
+                  <div style={{ display: "flex", gap: 10, alignItems: "baseline", flexWrap: "wrap" }}>
+                    <div style={{ fontWeight: 950, fontSize: 18 }}>{d.title || "Untitled draft"}</div>
+                    <div className="muted" style={{ fontSize: 13 }}>
+                      Tone: {d.tone || "Professional"} · Saved: {formatWhen(d.updatedAt || d.createdAt)}
+                    </div>
+                  </div>
+
+                  <div className="muted" style={{ fontSize: 13, lineHeight: 1.5 }}>
+                    {clampText((d.blogText || "").replace(/\s+/g, " ").trim(), 220) || "No blog text stored."}
+                  </div>
+
+                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                    <button className="btn btnPrimary" onClick={() => onLoadDraft(d)}>
+                      Load into Generator
+                    </button>
+                    <button
+                      className="btn"
+                      onClick={() => {
+                        const next = drafts.filter((x) => x.id !== d.id);
+                        setDrafts(next);
+                        saveDrafts(next);
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
+
+function PlaceholderPage({ title, desc }) {
+  return (
+    <div className="page">
+      <section className="section">
+        <div className="card">
+          <div className="cardInner">
+            <h2 className="sectionTitle" style={{ marginTop: 0 }}>
+              {title}
+            </h2>
+            <p className="sectionDesc" style={{ marginBottom: 0 }}>
+              {desc}
+            </p>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function deriveTitle(blogText, tone) {
+  const raw = (blogText || "").trim();
+  if (!raw) return `Draft (${tone})`;
+  const firstLine = raw.split("\n").map((s) => s.trim()).filter(Boolean)[0] || raw;
+  const cleaned = firstLine.replace(/^#+\s*/, "");
+  return clampText(cleaned, 60);
+}
+
+function formatWhen(iso) {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleString();
+  } catch {
+    return "";
+  }
+}
+
+function AppInner() {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const [drafts, setDrafts] = useState(() => loadDrafts());
+
+  const navigate = useNavigate();
+
+  // Inbox state lifting: we load a draft by navigating to inbox and passing it via sessionStorage
+  const loadDraftIntoGenerator = (draft) => {
+    try {
+      sessionStorage.setItem("sparksocial:loadDraft", JSON.stringify(draft));
+    } catch {}
+    navigate("/inbox");
+  };
+
+  const inboxKeyRef = useRef(0);
+
+  return (
+    <Layout
+      sidebarOpen={sidebarOpen}
+      setSidebarOpen={setSidebarOpen}
+      onToggleSidebar={() => setSidebarOpen((v) => !v)}
+    >
+      <Routes>
+        <Route
+          path="/inbox"
+          element={
+            <InboxWithDraftLoader
+              key={`inbox_${inboxKeyRef.current}`}
+              drafts={drafts}
+              setDrafts={setDrafts}
+              onResetKey={() => {
+                inboxKeyRef.current += 1;
+              }}
+            />
+          }
+        />
+        <Route
+          path="/drafts"
+          element={<DraftsPage drafts={drafts} setDrafts={setDrafts} onLoadDraft={loadDraftIntoGenerator} />}
+        />
+        <Route
+          path="/scheduler"
+          element={
+            <PlaceholderPage
+              title="Scheduler"
+              desc="Next: add a simple calendar queue with planned publish dates for each platform."
+            />
+          }
+        />
+        <Route
+          path="/connections"
+          element={
+            <PlaceholderPage
+              title="Connections"
+              desc="Next: connect accounts. For now this stays local and offline."
+            />
+          }
+        />
+        <Route
+          path="/logs"
+          element={
+            <PlaceholderPage
+              title="Logs"
+              desc="Next: show actions like generated, copied, saved, and deleted."
+            />
+          }
+        />
+        <Route path="*" element={<InboxWithDraftLoader drafts={drafts} setDrafts={setDrafts} />} />
+      </Routes>
+    </Layout>
+  );
+}
+
+/**
+ * Loads a draft from sessionStorage when navigating from Drafts page.
+ * This lets us keep InboxPage clean, and avoids global stores.
+ */
+function InboxWithDraftLoader({ drafts, setDrafts }) {
+  const [seed, setSeed] = useState(0);
+  const [prefill, setPrefill] = useState(null);
+
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem("sparksocial:loadDraft");
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      sessionStorage.removeItem("sparksocial:loadDraft");
+      setPrefill(parsed);
+      setSeed((s) => s + 1);
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  return <InboxPageWithPrefill key={`inbox_seed_${seed}`} drafts={drafts} setDrafts={setDrafts} prefill={prefill} />;
+}
+
+function InboxPageWithPrefill({ drafts, setDrafts, prefill }) {
+  const [tone, setTone] = useState("Professional");
+  const [pillState, setPillState] = useState("ready");
+
+  const [blogText, setBlogText] = useState("");
+  const [xText, setXText] = useState("");
+  const [fbText, setFbText] = useState("");
+  const [liText, setLiText] = useState("");
+
+  const xLimit = 280;
+  const fbLimit = 1200;
+  const liLimit = 2000;
+
+  useEffect(() => {
+    if (!prefill) return;
+
+    setTone(prefill.tone || "Professional");
+    setBlogText(prefill.blogText || "");
+    setXText(prefill.xText || "");
+    setFbText(prefill.fbText || "");
+    setLiText(prefill.liText || "");
+    setPillState("ready");
+  }, [prefill]);
+
+  const generate = () => {
+    const { x, facebook, linkedin } = buildPostsFromBlog(blogText, tone);
+    setXText(x);
+    setFbText(facebook);
+    setLiText(linkedin);
+    setPillState("ready");
+  };
+
+  const saveToDrafts = () => {
+    try {
+      const now = new Date().toISOString();
+      const item = {
+        id: newId(),
+        createdAt: now,
+        updatedAt: now,
+        tone,
+        blogText,
+        xText,
+        fbText,
+        liText,
+        title: deriveTitle(blogText, tone),
+      };
+
+      const next = [item, ...drafts];
+      setDrafts(next);
+      saveDrafts(next);
+      setPillState("saved");
+    } catch {
+      setPillState("failed");
+    }
+  };
+
+  return (
+    <div className="page">
+      <section className="section">
+        <div className="sectionHeader">
+          <div>
+            <h2 className="sectionTitle">Blog to Social Media Generator</h2>
+            <p className="sectionDesc">
+              Paste your blog article or newsletter text, then generate platform posts. Save to Drafts stores it
+              on this device.
+            </p>
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="cardInner">
+            <div className="generatorTopRow">
+              <div className="generatorControls">
+                <div style={{ fontWeight: 900 }}>Tone</div>
+                <select value={tone} onChange={(e) => setTone(e.target.value)}>
+                  <option>Professional</option>
+                  <option>Friendly</option>
+                  <option>Bold</option>
+                </select>
+
+                <Pill state={pillState} />
+              </div>
+
+              <div className="actions">
+                <button className="btn" onClick={saveToDrafts}>
+                  Save to Drafts
+                </button>
+                <button className="btn btnPrimary" onClick={generate}>
+                  Generate
                 </button>
               </div>
             </div>
-          ))}
+
+            <div style={{ marginTop: 12 }}>
+              <textarea
+                value={blogText}
+                onChange={(e) => setBlogText(e.target.value)}
+                placeholder="Paste your blog article or newsletter text here…"
+              />
+            </div>
+          </div>
         </div>
-      )}
+      </section>
 
-      {toast ? <div className="toast">{toast}</div> : null}
-    </div>
-  );
-}
+      <section className="section" style={{ marginTop: 4 }}>
+        <div className="platformGrid">
+          <div className="card cardHover platformCard platformX">
+            <div className="cardInner">
+              <div className="platformHeader">
+                <h3>Twitter / X</h3>
+                <div className="counter">
+                  {(xText || "").length}/{xLimit}
+                </div>
+                <button className="btn copyBtn" onClick={() => copyToClipboard(xText)}>
+                  Copy
+                </button>
+              </div>
 
-function Scheduler() {
-  return (
-    <div>
-      <h2>Scheduler</h2>
-      <div className="muted">Coming next.</div>
-    </div>
-  );
-}
+              <textarea
+                value={xText}
+                onChange={(e) => setXText(clampText(e.target.value, xLimit))}
+                placeholder="X post output…"
+              />
 
-function Connections() {
-  return (
-    <div>
-      <h2>Connections</h2>
-      <div className="muted">Coming next.</div>
-    </div>
-  );
-}
+              <div className="previewWrap">
+                <div className="previewCard">
+                  <div className="previewMeta">
+                    <div className="avatar">S</div>
+                    <div>
+                      <div style={{ fontWeight: 900 }}>SparkSocial</div>
+                      <div className="muted">@sparkwaveitservice · Just now</div>
+                    </div>
+                  </div>
+                  <p className="previewText">{xText || "Preview will show here."}</p>
+                </div>
+              </div>
+            </div>
+          </div>
 
-function Logs() {
-  return (
-    <div>
-      <h2>Logs</h2>
-      <div className="muted">Coming next.</div>
+          <div className="card cardHover platformCard platformFB">
+            <div className="cardInner">
+              <div className="platformHeader">
+                <h3>Facebook</h3>
+                <div className="counter">
+                  {(fbText || "").length}/{fbLimit}
+                </div>
+                <button className="btn copyBtn" onClick={() => copyToClipboard(fbText)}>
+                  Copy
+                </button>
+              </div>
+
+              <textarea
+                value={fbText}
+                onChange={(e) => setFbText(clampText(e.target.value, fbLimit))}
+                placeholder="Facebook post output…"
+              />
+
+              <div className="previewWrap">
+                <div className="previewCard">
+                  <div className="previewMeta">
+                    <div className="avatar">S</div>
+                    <div>
+                      <div style={{ fontWeight: 900 }}>SparkSocial</div>
+                      <div className="muted">Public · Just now</div>
+                    </div>
+                  </div>
+                  <p className="previewText">{fbText || "Preview will show here."}</p>
+                  <div className="muted" style={{ marginTop: 10, fontWeight: 850 }}>
+                    Like · Comment · Share
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="card cardHover platformCard platformLI">
+            <div className="cardInner">
+              <div className="platformHeader">
+                <h3>LinkedIn</h3>
+                <div className="counter">
+                  {(liText || "").length}/{liLimit}
+                </div>
+                <button className="btn copyBtn" onClick={() => copyToClipboard(liText)}>
+                  Copy
+                </button>
+              </div>
+
+              <textarea
+                value={liText}
+                onChange={(e) => setLiText(clampText(e.target.value, liLimit))}
+                placeholder="LinkedIn post output…"
+              />
+
+              <div className="previewWrap">
+                <div className="previewCard">
+                  <div className="previewMeta">
+                    <div className="avatar">S</div>
+                    <div>
+                      <div style={{ fontWeight: 900 }}>SparkSocial</div>
+                      <div className="muted">IT Services · Just now</div>
+                    </div>
+                  </div>
+                  <p className="previewText">{liText || "Preview will show here."}</p>
+                  <div className="muted" style={{ marginTop: 10, fontWeight: 850 }}>
+                    Like · Comment · Repost · Send
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
@@ -739,16 +833,7 @@ function Logs() {
 export default function App() {
   return (
     <HashRouter>
-      <Layout>
-        <Routes>
-          <Route path="/" element={<Navigate to="/inbox" replace />} />
-          <Route path="/inbox" element={<Inbox />} />
-          <Route path="/drafts" element={<Drafts />} />
-          <Route path="/scheduler" element={<Scheduler />} />
-          <Route path="/connections" element={<Connections />} />
-          <Route path="/logs" element={<Logs />} />
-        </Routes>
-      </Layout>
+      <AppInner />
     </HashRouter>
   );
 }

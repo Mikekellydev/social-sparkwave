@@ -1,129 +1,139 @@
 /* App.css
-   SparkSocial UI theme + layout
-   Goals:
-   - Dark SaaS typography scale
-   - Soft glassmorphism cards
-   - Animated gradient header (but NOT a weird “pill”)
-   - Neon hover glow
-   - Desktop: NO hamburger or X visible
-   - Social layout: Twitter + Facebook on top row, LinkedIn full width underneath
-   - Twitter/Facebook preview cards match height (stretch)
+   "Website" polish for React app (index.html feel) without being index.html
 */
 
 :root{
-  --bg0: #05070c;
-  --bg1: #070b14;
-  --ink: rgba(236, 242, 255, .92);
-  --muted: rgba(236, 242, 255, .68);
+  --bg0:#05070c;
+  --bg1:#070b14;
+  --ink:rgba(236,242,255,.92);
+  --muted:rgba(236,242,255,.66);
 
-  --glass: rgba(255,255,255,.06);
-  --glass2: rgba(255,255,255,.085);
-  --border: rgba(255,255,255,.10);
-  --border2: rgba(255,255,255,.14);
+  --glass:rgba(255,255,255,.06);
+  --glass2:rgba(255,255,255,.085);
+  --border:rgba(255,255,255,.10);
+  --border2:rgba(255,255,255,.14);
 
-  --shadow: 0 18px 60px rgba(0,0,0,.55);
-  --shadow2: 0 10px 35px rgba(0,0,0,.45);
+  --shadow:0 18px 60px rgba(0,0,0,.55);
+  --shadow2:0 10px 35px rgba(0,0,0,.45);
 
-  --r-lg: 18px;
-  --r-md: 14px;
+  --r-xl:22px;
+  --r-lg:18px;
+  --r-md:14px;
 
-  --accentA: #6d7bff;
-  --accentB: #46e6ff;
-  --accentC: #a855f7;
+  --accentA:#6d7bff;
+  --accentB:#46e6ff;
+  --accentC:#a855f7;
 
-  --glowA: rgba(109,123,255,.38);
-  --glowB: rgba(70,230,255,.24);
-  --glowC: rgba(168,85,247,.22);
+  --glowA:rgba(109,123,255,.40);
+  --glowB:rgba(70,230,255,.26);
+  --glowC:rgba(168,85,247,.24);
 
-  --h1: clamp(28px, 3.2vw, 40px);
-  --h2: clamp(20px, 2.1vw, 28px);
-  --h3: 18px;
-  --body: 16px;
-  --small: 13px;
+  --h1:clamp(30px, 3.2vw, 44px);
+  --h2:clamp(20px, 2.1vw, 30px);
+  --h3:18px;
+  --body:16px;
+  --small:13px;
 
-  --line: 1.55;
+  --line:1.55;
+
+  /* "Website container" width */
+  --container: 1120px;
+  --pagePad: clamp(14px, 2vw, 22px);
 }
 
-*{ box-sizing: border-box; }
-html, body{
-  height: 100%;
-  margin: 0;
-  color: var(--ink);
-  background: radial-gradient(1200px 900px at 15% 10%, rgba(168,85,247,.20), transparent 55%),
-              radial-gradient(900px 700px at 80% 25%, rgba(70,230,255,.16), transparent 55%),
-              radial-gradient(1000px 800px at 60% 80%, rgba(109,123,255,.14), transparent 60%),
-              linear-gradient(180deg, var(--bg0), var(--bg1));
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
+*{ box-sizing:border-box; }
+html,body{
+  height:100%;
+  margin:0;
+  color:var(--ink);
+  background:
+    radial-gradient(1100px 800px at 18% 12%, rgba(168,85,247,.18), transparent 56%),
+    radial-gradient(900px 650px at 80% 22%, rgba(70,230,255,.14), transparent 56%),
+    radial-gradient(1000px 800px at 60% 86%, rgba(109,123,255,.12), transparent 60%),
+    linear-gradient(180deg, var(--bg0), var(--bg1));
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  text-rendering:optimizeLegibility;
+  -webkit-font-smoothing:antialiased;
 }
-#root{ height: 100%; }
+#root{ height:100%; }
 
-/* ---------------------------
-   App shell
-----------------------------*/
+/* ---------------------------------
+   APP SHELL
+----------------------------------*/
 .app{
-  min-height: 100%;
-  display: grid;
+  min-height:100%;
+  display:grid;
   grid-template-columns: 280px 1fr;
-  gap: 18px;
-  padding: 18px;
+  gap:18px;
+  padding: var(--pagePad);
 }
 
 /* Sidebar */
 .sidebar{
   position: sticky;
-  top: 18px;
+  top: var(--pagePad);
   align-self: start;
-  height: calc(100vh - 36px);
-  overflow: hidden;
+  height: calc(100vh - (var(--pagePad) * 2));
+  overflow:hidden;
 
-  border-radius: var(--r-lg);
-  background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.04));
+  border-radius: var(--r-xl);
+  background: linear-gradient(180deg, rgba(255,255,255,.075), rgba(255,255,255,.04));
   border: 1px solid var(--border);
   box-shadow: var(--shadow2);
   backdrop-filter: blur(16px);
 }
 
 .sidebarInner{
-  height: 100%;
-  overflow: auto;
-  padding: 18px;
+  height:100%;
+  overflow:auto;
+  padding:18px;
 }
 
 .brand{
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 14px;
+  display:flex;
+  align-items:center;
+  gap:12px;
+  margin-bottom:14px;
+}
+.brandMark{
+  width:38px;
+  height:38px;
+  border-radius: 14px;
+  display:grid;
+  place-items:center;
+  background: linear-gradient(135deg, rgba(109,123,255,.30), rgba(70,230,255,.14));
+  border: 1px solid rgba(255,255,255,.14);
+  box-shadow: 0 0 0 2px rgba(109,123,255,.10);
+  font-weight:900;
 }
 .brand h1{
-  margin: 0;
-  font-size: 26px;
-  letter-spacing: .2px;
+  margin:0;
+  font-size:26px;
+  letter-spacing:.2px;
 }
 .brand .tag{
+  margin-top:2px;
   font-size: var(--small);
   color: var(--muted);
 }
 
 .nav{
-  display: grid;
-  gap: 10px;
-  margin-top: 12px;
+  display:grid;
+  gap:10px;
+  margin-top:14px;
 }
 .nav a, .nav button{
-  appearance: none;
-  border: 1px solid transparent;
-  background: transparent;
-  color: var(--ink);
-  text-decoration: none;
-  text-align: left;
-  padding: 12px 12px;
-  border-radius: 14px;
-  font-weight: 650;
-  letter-spacing: .2px;
-  cursor: pointer;
+  appearance:none;
+  border:1px solid transparent;
+  background:transparent;
+  color:var(--ink);
+  text-decoration:none;
+  text-align:left;
+  padding:12px 12px;
+  border-radius:16px;
+  font-weight:750;
+  letter-spacing:.2px;
+  cursor:pointer;
   transition: transform .15s ease, background .15s ease, border-color .15s ease, box-shadow .15s ease;
 }
 .nav a:hover, .nav button:hover{
@@ -138,53 +148,75 @@ html, body{
   box-shadow: 0 0 0 2px rgba(109,123,255,.10), 0 14px 34px rgba(0,0,0,.38);
 }
 
-/* Content */
+/* ---------------------------------
+   CONTENT AREA AS "WEBSITE PAGE"
+----------------------------------*/
 .content{
-  min-width: 0;
-  display: grid;
+  min-width:0;
+  display:grid;
   gap: 16px;
-  align-content: start;
-}
-.content > div{
-  width: 100%;
-  max-width: none;
-  margin: 0;
+  align-content:start;
 }
 
-/* ---------------------------
-   Header (animated gradient, not a pill)
-----------------------------*/
+/* This is the "page container" look.
+   If your JSX wraps page content in .page, this will center it nicely.
+   If not, it still works because content children are full width. */
+.page{
+  width: 100%;
+  max-width: var(--container);
+  margin: 0 auto;
+  display: grid;
+  gap: 16px;
+}
+
+/* Make sure nothing forces narrow widths */
+.content > div{
+  width:100%;
+  max-width:none;
+  margin:0;
+}
+
+/* ---------------------------------
+   TOP BAR + HERO (index.html vibe)
+----------------------------------*/
 .header{
-  position: relative;
-  border-radius: var(--r-lg);
+  width: 100%;
+  max-width: var(--container);
+  margin: 0 auto;
+
+  border-radius: var(--r-xl);
   border: 1px solid var(--border);
   background: rgba(255,255,255,.05);
   box-shadow: var(--shadow2);
-  overflow: hidden;
+  overflow:hidden;
   backdrop-filter: blur(14px);
+
+  position: relative;
 }
+
 .header::before{
-  content: "";
-  position: absolute;
-  inset: -2px;
+  content:"";
+  position:absolute;
+  inset:-2px;
   background: linear-gradient(120deg,
-    rgba(109,123,255,.35),
+    rgba(109,123,255,.34),
     rgba(70,230,255,.22),
     rgba(168,85,247,.26),
-    rgba(109,123,255,.35)
+    rgba(109,123,255,.34)
   );
   filter: blur(10px);
-  opacity: .75;
-  transform: translate3d(0,0,0);
+  opacity:.75;
   animation: headerFlow 10s ease-in-out infinite;
+  transform: translate3d(0,0,0);
 }
 .header::after{
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(900px 220px at 20% 20%, rgba(255,255,255,.10), transparent 60%),
-              radial-gradient(700px 220px at 80% 60%, rgba(255,255,255,.07), transparent 62%);
-  pointer-events: none;
+  content:"";
+  position:absolute;
+  inset:0;
+  background:
+    radial-gradient(900px 220px at 20% 20%, rgba(255,255,255,.10), transparent 60%),
+    radial-gradient(700px 240px at 80% 70%, rgba(255,255,255,.08), transparent 62%);
+  pointer-events:none;
 }
 
 @keyframes headerFlow{
@@ -193,37 +225,86 @@ html, body{
   100%{ transform: translateX(-6%) translateY(-2%); }
 }
 
+/* Website-like top bar section */
 .headerInner{
-  position: relative;
-  z-index: 1;
+  position:relative;
+  z-index:1;
   padding: 18px 20px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
 }
 
-/* Make the title a normal aligned header line */
-.headerTitle{
+/* Hero block inside header */
+.hero{
+  position:relative;
+  z-index:1;
+  padding: 4px 20px 18px 20px;
+  display:grid;
+  grid-template-columns: 1.35fr .65fr;
+  gap:16px;
+}
+
+.heroTitle{
   margin: 0;
   font-size: var(--h1);
-  line-height: 1.15;
-  letter-spacing: .2px;
+  line-height: 1.12;
+  letter-spacing:.2px;
   text-shadow: 0 12px 40px rgba(0,0,0,.45);
 }
-
-/* ---------------------------
-   Buttons, inputs, pills
-----------------------------*/
-.btn{
-  appearance: none;
+.heroSub{
+  margin: 10px 0 0 0;
+  color: var(--muted);
+  line-height: var(--line);
+  font-size: 15px;
+  max-width: 60ch;
+}
+.heroCtas{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-top: 14px;
+}
+.heroPanel{
+  border-radius: var(--r-lg);
   border: 1px solid rgba(255,255,255,.12);
+  background: rgba(0,0,0,.18);
+  box-shadow: 0 12px 32px rgba(0,0,0,.35);
+  padding: 14px;
+  align-self: stretch;
+}
+.heroStat{
+  display:grid;
+  gap:8px;
+}
+.heroStat .k{
+  font-size: var(--small);
+  color: var(--muted);
+  font-weight: 750;
+}
+.heroStat .v{
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing:.2px;
+}
+.heroStat .hint{
+  font-size: var(--small);
+  color: rgba(236,242,255,.58);
+}
+
+/* ---------------------------------
+   BUTTONS + FORMS
+----------------------------------*/
+.btn{
+  appearance:none;
+  border:1px solid rgba(255,255,255,.12);
   background: rgba(255,255,255,.06);
   color: var(--ink);
   padding: 10px 14px;
   border-radius: 14px;
-  font-weight: 750;
-  cursor: pointer;
+  font-weight: 850;
+  cursor:pointer;
   transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease, background .15s ease;
 }
 .btn:hover{
@@ -232,7 +313,7 @@ html, body{
   box-shadow: 0 0 0 2px rgba(109,123,255,.12), 0 18px 38px rgba(0,0,0,.45);
 }
 .btnPrimary{
-  background: linear-gradient(135deg, rgba(109,123,255,.32), rgba(168,85,247,.22));
+  background: linear-gradient(135deg, rgba(109,123,255,.34), rgba(168,85,247,.22));
   border-color: rgba(109,123,255,.26);
 }
 .btnPrimary:hover{
@@ -242,31 +323,13 @@ html, body{
   box-shadow: 0 0 0 2px rgba(70,230,255,.14), 0 0 24px rgba(70,230,255,.18), 0 16px 36px rgba(0,0,0,.46);
 }
 
-/* “Ready / Saved / Failed” pill */
-.pill{
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 10px;
-  border-radius: 999px;
-  font-size: var(--small);
-  font-weight: 750;
-  border: 1px solid rgba(255,255,255,.12);
-  background: rgba(255,255,255,.06);
-  color: var(--muted);
-}
-.pillReady{ border-color: rgba(70,230,255,.18); color: rgba(190,255,255,.88); }
-.pillSaved{ border-color: rgba(109,123,255,.24); color: rgba(210,220,255,.92); }
-.pillFailed{ border-color: rgba(255,120,180,.22); color: rgba(255,200,225,.92); }
-
-/* Inputs / selects */
 select, textarea, input{
   color: var(--ink);
   background: rgba(0,0,0,.22);
   border: 1px solid rgba(255,255,255,.10);
   border-radius: 14px;
   padding: 10px 12px;
-  outline: none;
+  outline:none;
   transition: border-color .15s ease, box-shadow .15s ease;
 }
 select:focus, textarea:focus, input:focus{
@@ -274,34 +337,70 @@ select:focus, textarea:focus, input:focus{
   box-shadow: 0 0 0 2px rgba(109,123,255,.12);
 }
 textarea{
-  width: 100%;
+  width:100%;
   min-height: 180px;
   resize: vertical;
   line-height: var(--line);
   font-size: var(--body);
 }
 
-/* ---------------------------
-   Cards (glassmorphism)
-----------------------------*/
+/* Status pill */
+.pill{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:7px 10px;
+  border-radius:999px;
+  font-size: var(--small);
+  font-weight: 850;
+  border:1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.06);
+  color: var(--muted);
+}
+.pillReady{ border-color: rgba(70,230,255,.18); color: rgba(190,255,255,.88); }
+.pillSaved{ border-color: rgba(109,123,255,.24); color: rgba(210,220,255,.92); }
+.pillFailed{ border-color: rgba(255,120,180,.22); color: rgba(255,200,225,.92); }
+
+/* ---------------------------------
+   SECTIONS + CARDS (website rhythm)
+----------------------------------*/
+.section{
+  width: 100%;
+  max-width: var(--container);
+  margin: 0 auto;
+  display: grid;
+  gap: 12px;
+}
+.sectionHeader{
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+}
+.sectionTitle{
+  margin:0;
+  font-size: var(--h2);
+  letter-spacing:.2px;
+}
+.sectionDesc{
+  margin:0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: var(--line);
+  max-width: 70ch;
+}
+
 .card{
-  border-radius: var(--r-lg);
+  border-radius: var(--r-xl);
   border: 1px solid var(--border);
   background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.04));
   box-shadow: var(--shadow2);
   backdrop-filter: blur(16px);
-  overflow: hidden;
+  overflow:hidden;
 }
-.cardInner{
-  padding: 16px;
-}
-.cardTitle{
-  margin: 0 0 10px 0;
-  font-size: var(--h2);
-  line-height: 1.18;
-}
+.cardInner{ padding: 16px; }
 
-/* Neon hover glow for interactive cards */
 .cardHover{
   transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease;
 }
@@ -314,95 +413,81 @@ textarea{
     0 24px 60px rgba(0,0,0,.52);
 }
 
-/* ---------------------------
-   Generator section
-----------------------------*/
+/* Generator top row */
 .generatorTopRow{
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  flex-wrap: wrap;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  flex-wrap:wrap;
 }
 .generatorControls{
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
 }
 .actions{
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
 }
 
-/* ---------------------------
-   Social platform layout
-   - 2 columns on desktop: Twitter + Facebook
-   - LinkedIn always full width on row 2
-   - Cards stretch to same height in row 1
-----------------------------*/
-
-/* If your JSX uses .platformGrid already, this will take over */
+/* ---------------------------------
+   SOCIAL LAYOUT
+   Desktop: 2 columns on top, LinkedIn full width
+----------------------------------*/
 .platformGrid{
-  display: grid;
+  display:grid;
   grid-template-columns: 1fr 1fr;
   grid-template-areas:
     "x fb"
     "li li";
-  gap: 18px;
-  align-items: stretch;  /* important: make row items same height */
+  gap:18px;
+  align-items:stretch;
 }
 
-/* These area hooks are optional.
-   Add these classes on the wrappers if you have them:
-   <section className="platformCard platformX"> ... */
 .platformX{ grid-area: x; }
 .platformFB{ grid-area: fb; }
 .platformLI{ grid-area: li; }
 
-/* The platform card itself */
 .platformCard{
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
+  display:flex;
+  flex-direction:column;
+  min-width:0;
 }
 
-/* Header row inside platform card (title + counter + copy button) */
 .platformHeader{
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 10px;
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:10px;
 }
 .platformHeader h3{
-  margin: 0;
-  font-size: 22px;
-  letter-spacing: .2px;
+  margin:0;
+  font-size:22px;
+  letter-spacing:.2px;
 }
 .counter{
   font-size: var(--small);
   color: var(--muted);
-  font-weight: 750;
+  font-weight: 850;
 }
-.copyBtn{
-  margin-left: auto;
-}
+.copyBtn{ margin-left:auto; }
 
-/* Textareas in platform cards */
 .platformCard textarea{
-  flex: 1;               /* important: stretch textarea height within card */
+  flex: 0 0 auto;
   min-height: 140px;
 }
 
-/* Preview blocks: stretch so Twitter and Facebook match height */
+/* Previews stretch so Twitter/Facebook align height */
 .previewWrap{
-  margin-top: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  flex: 1;               /* fills remaining height when present */
+  margin-top:12px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  flex: 1;
 }
 .previewCard{
   border-radius: var(--r-md);
@@ -410,76 +495,66 @@ textarea{
   background: rgba(0,0,0,.18);
   padding: 12px;
   box-shadow: 0 10px 30px rgba(0,0,0,.35);
-  flex: 1;               /* stretch */
-  min-height: 140px;     /* keeps short previews from collapsing */
+  flex: 1;
+  min-height: 160px;
 }
 .previewMeta{
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  display:flex;
+  align-items:center;
+  gap:10px;
   color: var(--muted);
   font-size: var(--small);
-  margin-bottom: 8px;
+  margin-bottom:8px;
 }
 .avatar{
-  width: 34px;
-  height: 34px;
-  border-radius: 999px;
-  display: grid;
-  place-items: center;
+  width:34px;
+  height:34px;
+  border-radius:999px;
+  display:grid;
+  place-items:center;
   background: rgba(255,255,255,.10);
   border: 1px solid rgba(255,255,255,.12);
-  font-weight: 900;
+  font-weight: 950;
   box-shadow: 0 0 0 2px rgba(109,123,255,.10);
 }
 .previewText{
-  margin: 0;
+  margin:0;
   line-height: var(--line);
   font-size: var(--body);
 }
 
-/* LinkedIn: ensure it spans full width and looks intentional */
-.platformLI .previewCard{
-  min-height: 170px;
-}
-
-/* ---------------------------
+/* ---------------------------------
    Hide hamburger + X on desktop
-   (Your JSX likely has classes like .hamburger, .menuBtn, .closeBtn, .sidebarToggle)
-----------------------------*/
+----------------------------------*/
 .hamburger,
 .menuBtn,
 .sidebarToggle,
 .closeBtn,
 .mobileNavToggle{
-  display: none !important;
+  display:none !important;
 }
 
-/* ---------------------------
-   Responsive: mobile sidebar becomes drawer; show hamburger/X only on small screens
-----------------------------*/
+/* ---------------------------------
+   MOBILE
+----------------------------------*/
 @media (max-width: 980px){
   .app{
     grid-template-columns: 1fr;
     padding: 14px;
   }
 
-  /* Sidebar becomes overlay drawer */
   .sidebar{
     position: fixed;
     top: 12px;
     left: 12px;
     height: calc(100vh - 24px);
-    width: min(86vw, 320px);
+    width: min(86vw, 340px);
     z-index: 60;
     transform: translateX(-110%);
     transition: transform .2s ease;
   }
-  .sidebar.isOpen{
-    transform: translateX(0);
-  }
+  .sidebar.isOpen{ transform: translateX(0); }
 
-  /* Backdrop if you have one */
   .backdrop{
     position: fixed;
     inset: 0;
@@ -488,13 +563,20 @@ textarea{
     z-index: 55;
   }
 
-  /* Now allow hamburger and X on mobile */
   .hamburger,
   .menuBtn,
   .sidebarToggle,
   .closeBtn,
   .mobileNavToggle{
-    display: inline-flex !important;
+    display:inline-flex !important;
+  }
+
+  .header, .section, .page{
+    max-width: 100%;
+  }
+
+  .hero{
+    grid-template-columns: 1fr;
   }
 
   .platformGrid{
@@ -506,13 +588,5 @@ textarea{
   }
 }
 
-/* ---------------------------
-   Utility helpers
-----------------------------*/
+/* Helpers */
 .muted{ color: var(--muted); }
-.spacer{ height: 10px; }
-
-/* If something accidentally applies a max-width to the app container, kill it */
-.app, .content, .card, .header{
-  max-width: none;
-}
