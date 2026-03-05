@@ -8,8 +8,8 @@ const STORE = "drafts";
 const KEY = "current";
 
 const LIMIT_X = 280;
-const LIMIT_FB = 1200;
-const LIMIT_LI = 2000;
+const LIMIT_FB = 2400;
+const LIMIT_LI = 2400;
 
 async function getDb() {
   return openDB(DB_NAME, 1, {
