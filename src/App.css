@@ -1,111 +1,634 @@
-/* =========================================
-   DESKTOP GRID: Twitter + Facebook aligned
-   LinkedIn spans full width
-========================================= */
+/* =========================================================
+   SparkSocial App.css
+   Dark SaaS + glassmorphism + neon glow + animated header
+   Layout:
+     - Desktop: sidebar + content
+     - Desktop cards: Twitter/Facebook row, LinkedIn full width under
+     - Mobile: stacked + hamburger visible
+   ========================================================= */
 
-.platformGrid{
+/* ---------- CSS Reset-ish / Globals ---------- */
+:root {
+  --bg0: #05070d;
+  --bg1: #070b14;
+  --panel: rgba(255, 255, 255, 0.06);
+  --panel2: rgba(255, 255, 255, 0.08);
+  --stroke: rgba(255, 255, 255, 0.12);
+  --stroke2: rgba(255, 255, 255, 0.18);
+  --text: rgba(244, 247, 255, 0.92);
+  --muted: rgba(244, 247, 255, 0.68);
+
+  --brandA: #7c3aed; /* purple */
+  --brandB: #22d3ee; /* cyan */
+  --brandC: #60a5fa; /* blue */
+  --brandD: #10b981; /* green */
+
+  --shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+  --shadow2: 0 14px 40px rgba(0, 0, 0, 0.35);
+
+  --r-lg: 22px;
+  --r-md: 16px;
+  --r-sm: 12px;
+
+  --pad: 18px;
+  --pad-lg: 22px;
+
+  --max: 1200px;
+  --sidebarW: 280px;
+
+  --glow: 0 0 0 1px rgba(124, 58, 237, 0.35), 0 0 22px rgba(34, 211, 238, 0.18);
+  --glow2: 0 0 0 1px rgba(34, 211, 238, 0.35), 0 0 26px rgba(124, 58, 237, 0.22);
+
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font);
+  color: var(--text);
+  background:
+    radial-gradient(1200px 700px at 10% 10%, rgba(124, 58, 237, 0.20), transparent 60%),
+    radial-gradient(900px 600px at 90% 20%, rgba(34, 211, 238, 0.15), transparent 55%),
+    radial-gradient(900px 700px at 60% 90%, rgba(16, 185, 129, 0.10), transparent 60%),
+    linear-gradient(180deg, var(--bg0), var(--bg1));
+  overflow-x: hidden;
+}
+
+/* Ensure root fills screen */
+#root {
+  min-height: 100vh;
+}
+
+/* Prevent accidental global constraints from earlier experiments */
+.content > div {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+}
+
+/* ---------- Typography Scale (dark SaaS) ---------- */
+h1,
+h2,
+h3 {
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.h1 {
+  font-size: clamp(26px, 2.6vw, 40px);
+  line-height: 1.08;
+  font-weight: 800;
+}
+
+.h2 {
+  font-size: clamp(18px, 1.6vw, 26px);
+  line-height: 1.15;
+  font-weight: 800;
+}
+
+.label {
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+
+.small {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+a {
+  color: inherit;
+}
+
+/* ---------- Utility Glass Panel ---------- */
+.glass {
+  background: var(--panel);
+  border: 1px solid var(--stroke);
+  box-shadow: var(--shadow2);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-radius: var(--r-lg);
+}
+
+/* ---------- App Layout ---------- */
+.appShell {
+  min-height: 100vh;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px;
-  align-items: stretch; /* IMPORTANT: make both columns equal height per row */
+  grid-template-columns: var(--sidebarW) 1fr;
+  gap: 0;
 }
 
-/* Each social block becomes a consistent "card layout" */
-.platformBlock{
-  display: flex;
-  flex-direction: column;
-  min-height: 520px;      /* tweak if you want taller cards */
-}
-
-/* Make the textarea a consistent height */
-.platformBlock textarea{
-  flex: 0 0 auto;
-  min-height: 120px;      /* tweak as desired */
-}
-
-/* Preview fills the remaining height so cards align even if text differs */
-.platformBlock .previewCard{
-  margin-top: 12px;
-  flex: 1 1 auto;
-  min-height: 140px;
-  display: flex;
-  flex-direction: column;
-}
-
-/* Keep preview body readable and not squished */
-.previewBody{
-  flex: 1 1 auto;
-}
-
-/* Make LinkedIn always full width on desktop
-   Best case: you add className="platformBlock linkedin" in JSX.
-   For now we can target the 3rd block in this view. */
-.platformGrid .platformBlock:nth-child(3){
-  grid-column: 1 / -1;
-  min-height: 560px; /* optional */
-}
-
-/* Mobile: stack everything */
-@media (max-width: 980px){
-  .platformGrid{
-    grid-template-columns: 1fr;
-  }
-  .platformGrid .platformBlock:nth-child(3){
-    grid-column: auto;
-  }
-  .platformBlock{
-    min-height: auto;
-  }
-}
-
-
-/* =========================================
-   HEADER: flatten, align, remove weird shape
-========================================= */
-
-.header{
+/* Sidebar */
+.sidebar {
   position: sticky;
   top: 0;
-  z-index: 50;
+  height: 100vh;
+  padding: 18px;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    radial-gradient(800px 500px at 20% 10%, rgba(124, 58, 237, 0.20), transparent 55%),
+    radial-gradient(700px 450px at 70% 35%, rgba(34, 211, 238, 0.12), transparent 55%),
+    rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
 
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 850;
+  font-size: 28px;
+  letter-spacing: -0.02em;
+  margin: 6px 0 18px;
+}
+
+.nav {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.nav a,
+.nav button {
   width: 100%;
-  margin: 0 !important;
-  border-radius: 0 !important;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  padding: 14px 14px;
+  border-radius: 14px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: rgba(244, 247, 255, 0.82);
+  text-decoration: none;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 160ms ease;
+}
 
-  padding: 16px 22px !important; /* consistent */
-  background: rgba(10, 14, 28, 0.55);
+.nav a:hover,
+.nav button:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.10);
+  box-shadow: var(--glow);
+}
+
+.nav .active {
+  background: linear-gradient(90deg, rgba(124, 58, 237, 0.22), rgba(34, 211, 238, 0.14));
+  border-color: rgba(124, 58, 237, 0.35);
+  box-shadow: var(--glow2);
+}
+
+/* Main content area */
+.main {
+  padding: 18px;
+  display: grid;
+  justify-items: center;
+}
+
+.mainInner {
+  width: 100%;
+  max-width: var(--max);
+}
+
+/* ---------- Header (animated gradient, no weird rounded bar) ---------- */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  padding: 16px 16px;
+  margin-bottom: 16px;
+
+  border-radius: 18px; /* normal card radius */
+  border: 1px solid rgba(255, 255, 255, 0.10);
+
+  background:
+    linear-gradient(120deg,
+      rgba(124, 58, 237, 0.28),
+      rgba(34, 211, 238, 0.18),
+      rgba(96, 165, 250, 0.22),
+      rgba(16, 185, 129, 0.12)
+    );
+  background-size: 220% 220%;
+  animation: headerShift 10s ease infinite;
+
+  box-shadow: 0 16px 42px rgba(0, 0, 0, 0.35);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-
-  border-bottom: 1px solid rgba(255,255,255,0.10);
-  box-shadow: none !important;
 }
 
-/* If any gradient pseudo-element is creating a rounded blob */
-.header::before,
-.header::after{
-  border-radius: 0 !important;
+@keyframes headerShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
-
-/* =========================================
-   HAMBURGER + X: show only on mobile
-   Update selectors to match your actual button classes
-========================================= */
-
-/* Common class names people used earlier */
-.menuButton,
-.closeButton,
-.hamburger,
-.sidebarClose{
-  display: none !important;
+.headerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
-@media (max-width: 980px){
-  .menuButton,
-  .closeButton,
-  .hamburger,
-  .sidebarClose{
-    display: inline-flex !important;
+.headerTitle {
+  font-size: 28px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+/* ---------- Mobile menu buttons (hamburger + close) ---------- */
+/* By default: hidden on desktop */
+.menuBtn,
+.closeBtn {
+  display: none;
+}
+
+/* ---------- Generator Section ---------- */
+.sectionCard {
+  padding: var(--pad-lg);
+  border-radius: var(--r-lg);
+  border: 1px solid var(--stroke);
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: var(--shadow);
+}
+
+.sectionTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.sectionTitle {
+  font-size: 32px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+select,
+input,
+textarea {
+  font-family: var(--font);
+  color: var(--text);
+}
+
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding: 10px 38px 10px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(0, 0, 0, 0.28);
+  outline: none;
+  font-weight: 700;
+}
+
+select:focus {
+  box-shadow: var(--glow);
+  border-color: rgba(34, 211, 238, 0.35);
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(0, 0, 0, 0.20);
+  font-weight: 800;
+  font-size: 12px;
+  color: rgba(244, 247, 255, 0.78);
+}
+
+.pill.ok {
+  border-color: rgba(16, 185, 129, 0.30);
+  box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.18);
+}
+
+.pill.err {
+  border-color: rgba(239, 68, 68, 0.32);
+  box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.18);
+}
+
+/* Buttons */
+.btn {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+  padding: 10px 14px;
+  border-radius: 16px;
+  font-weight: 850;
+  cursor: pointer;
+  transition: 180ms ease;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.25);
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.35), var(--glow);
+  border-color: rgba(34, 211, 238, 0.30);
+}
+
+.btnPrimary {
+  background: linear-gradient(90deg, rgba(124, 58, 237, 0.85), rgba(34, 211, 238, 0.55));
+  border-color: rgba(124, 58, 237, 0.35);
+}
+
+.btnPrimary:hover {
+  box-shadow: 0 14px 38px rgba(0, 0, 0, 0.40), var(--glow2);
+}
+
+/* Blog input */
+.blogBox {
+  width: 100%;
+  min-height: 200px;
+  max-height: 360px;
+  resize: vertical;
+
+  border-radius: var(--r-lg);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.30);
+  padding: 16px;
+
+  outline: none;
+  line-height: 1.5;
+  font-size: 15px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+.blogBox:focus {
+  border-color: rgba(34, 211, 238, 0.28);
+  box-shadow: inset 0 0 0 1px rgba(34, 211, 238, 0.18), var(--glow);
+}
+
+/* ---------- Social Grid Layout (Twitter + Facebook top, LinkedIn full width) ---------- */
+.platformGrid {
+  display: grid;
+  gap: 18px;
+  margin-top: 18px;
+
+  /* Desktop default: 2 columns */
+  grid-template-columns: 1fr 1fr;
+  align-items: stretch; /* makes the two top cards equal height */
+}
+
+/* Force LinkedIn to span the full row beneath */
+.platformGrid .platformCard.linkedin {
+  grid-column: 1 / -1;
+}
+
+/* ---------- Platform Cards (glassmorphism + neon hover) ---------- */
+.platformCard {
+  position: relative;
+  padding: 18px;
+  border-radius: var(--r-lg);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: var(--shadow2);
+  transition: 200ms ease;
+  display: grid;
+  grid-template-rows: auto auto 1fr auto; /* header, textarea, preview, footer */
+  min-height: 360px; /* helps align visually with stretch */
+}
+
+.platformCard:hover {
+  transform: translateY(-2px);
+  border-color: rgba(34, 211, 238, 0.22);
+  box-shadow: 0 18px 52px rgba(0, 0, 0, 0.48), var(--glow);
+}
+
+.platformHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.platformName {
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+.counter {
+  font-weight: 900;
+  color: rgba(244, 247, 255, 0.72);
+}
+
+/* Post output textarea inside each platform */
+.platformText {
+  width: 100%;
+  min-height: 110px;
+  max-height: 160px;
+  resize: vertical;
+
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.30);
+  padding: 12px;
+
+  outline: none;
+  line-height: 1.45;
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+
+.platformText:focus {
+  border-color: rgba(124, 58, 237, 0.28);
+  box-shadow: var(--glow2);
+}
+
+/* Preview card area */
+.preview {
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(0, 0, 0, 0.26);
+  padding: 14px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+  overflow: hidden; /* prevents ugly overflow */
+  min-height: 140px; /* ensures cards align better */
+}
+
+/* Make preview show full post text instead of cutting off */
+.preview .previewBody {
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow: visible;
+}
+
+/* Simple avatar row styling for preview */
+.previewTop {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+}
+
+.previewMeta {
+  display: grid;
+  line-height: 1.1;
+}
+
+.previewName {
+  font-weight: 900;
+}
+
+.previewSub {
+  font-size: 12px;
+  color: rgba(244, 247, 255, 0.65);
+  font-weight: 700;
+}
+
+/* Footer actions (Like/Comment etc) */
+.previewActions {
+  display: flex;
+  gap: 14px;
+  margin-top: 10px;
+  color: rgba(244, 247, 255, 0.70);
+  font-weight: 800;
+  font-size: 13px;
+}
+
+/* Copy button placement */
+.copyBtn {
+  padding: 9px 12px;
+  border-radius: 14px;
+  font-weight: 900;
+}
+
+/* ---------- Mobile Behavior ---------- */
+@media (max-width: 980px) {
+  .appShell {
+    grid-template-columns: 1fr;
   }
+
+  .sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: min(86vw, 340px);
+    transform: translateX(-110%);
+    transition: transform 220ms ease;
+    z-index: 60;
+    border-right: 1px solid rgba(255, 255, 255, 0.10);
+  }
+
+  /* When your App adds an "open" class, it slides in */
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  /* Backdrop overlay, if you have one */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    z-index: 50;
+  }
+
+  /* Show hamburger on mobile */
+  .menuBtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(0, 0, 0, 0.25);
+    color: var(--text);
+    cursor: pointer;
+    box-shadow: var(--shadow2);
+  }
+
+  .menuBtn:hover {
+    box-shadow: var(--glow);
+  }
+
+  /* Show close button inside sidebar on mobile */
+  .closeBtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(0, 0, 0, 0.25);
+    color: var(--text);
+    cursor: pointer;
+    box-shadow: var(--shadow2);
+  }
+
+  .platformGrid {
+    grid-template-columns: 1fr; /* stack all cards */
+  }
+
+  .platformGrid .platformCard.linkedin {
+    grid-column: auto;
+  }
+
+  .headerTitle {
+    font-size: 22px;
+  }
+
+  .sectionTitle {
+    font-size: 26px;
+  }
+}
+
+/* ---------- Desktop: ensure hamburger and X NEVER show ---------- */
+@media (min-width: 981px) {
+  .menuBtn,
+  .closeBtn {
+    display: none !important;
+  }
+}
+
+/* ---------- Accessibility ---------- */
+:focus-visible {
+  outline: 2px solid rgba(34, 211, 238, 0.35);
+  outline-offset: 2px;
 }
