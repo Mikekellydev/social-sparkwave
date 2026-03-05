@@ -256,6 +256,17 @@ textarea {
   padding: 16px;
 }
 
+.platformCard textarea {
+  min-height: 140px;   /* phone friendly */
+  line-height: 1.45;
+}
+
+@media (max-width: 480px) {
+  .platformCard textarea {
+    min-height: 180px;
+  }
+}
+
 .platformHeader {
   display: flex;
   align-items: center;

@@ -144,40 +144,74 @@ function Layout({ children }) {
   );
 }
 
-function clampText(text, max) {
-  const cleaned = (text || "").replace(/\s+/g, " ").trim();
-  if (!cleaned) return "";
-  if (cleaned.length <= max) return cleaned;
-  return cleaned.slice(0, max - 1) + "…";
-}
-
 function buildOutputs(blogText, tone) {
-  const titleGuess = clampText((blogText || "").split("\n")[0] || "", 80);
-  const summary = clampText(blogText, 240);
+
+  const twitterText = clampText(blogText, 260); // keep safe under 280
+  const fullText = blogText.trim();
+
   const baseHashtag = "#ITLeadership";
 
   const professional = {
-    twitter: `${summary} ${baseHashtag}`.trim(),
-    facebook: `I published a new article and wanted to share one takeaway:\n\n${summary}\n\nWhat’s your perspective on this?`,
-    linkedin: `New article reflection:\n\n${summary}\n\nI’d value input from others who have worked through similar challenges.`,
+    twitter: `${twitterText} ${baseHashtag}`.trim(),
+
+    facebook:
+`I published a new article and wanted to share one takeaway:
+
+${fullText}
+
+What’s your perspective on this?`,
+
+    linkedin:
+`New article reflection:
+
+${fullText}
+
+I’d value input from others who have worked through similar challenges.`,
   };
 
   const conversational = {
-    twitter: `${summary} What do you think?`.trim(),
-    facebook: `Quick thought from something I wrote recently:\n\n${summary}\n\nIf you’ve been there too, I’d love to hear what you learned.`,
-    linkedin: `Something I’ve been thinking about lately:\n\n${summary}\n\nWhat would you add from your experience?`,
+    twitter: `${twitterText} What do you think?`.trim(),
+
+    facebook:
+`Quick thought from something I wrote recently:
+
+${fullText}
+
+If you’ve been there too, I’d love to hear what you learned.`,
+
+    linkedin:
+`Something I’ve been thinking about lately:
+
+${fullText}
+
+What would you add from your experience?`,
   };
 
   const promotional = {
-    twitter: `New post: ${clampText(blogText, 200)} Read more soon.`,
-    facebook: `New post is live.\n\n${summary}\n\nIf you want the full context, I’ll share the link next.`,
-    linkedin: `New post published.\n\n${summary}\n\nIf you’d like to read it, I’m happy to share the link.`,
+    twitter: `New post: ${clampText(blogText, 240)}`,
+
+    facebook:
+`New post is live.
+
+${fullText}
+
+If you'd like the full article I’m happy to share it.`,
+
+    linkedin:
+`New post published.
+
+${fullText}
+
+If you'd like to read the full article let me know.`,
   };
 
-  const map = { professional, conversational, promotional };
-  const chosen = map[tone] || professional;
+  const map = {
+    professional,
+    conversational,
+    promotional
+  };
 
-  return { ...chosen, meta: { titleGuess } };
+  return map[tone] || professional;
 }
 
 function PreviewCard({ variant, body }) {
