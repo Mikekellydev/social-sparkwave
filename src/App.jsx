@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 
+import "./App.css";
+
 /**
  * SparkSocial: Blog -> Platform-ready posts
  * Limits:
