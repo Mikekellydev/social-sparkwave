@@ -1,80 +1,168 @@
 import React from "react";
-import { HashRouter, Routes, Route, NavLink, Navigate, useNavigate } from "react-router-dom";
+import { HashRouter, Routes, Route, NavLink, Navigate } from "react-router-dom";
 import "./App.css";
 import { openDB } from "idb";
 
 /**
- * Character limits
+ * SparkSocial
+ * Inbox: generate platform drafts from blog text
+ * Drafts: save multiple drafts, view, load into Inbox, delete
+ *
+ * Persistence:
+ * - IndexedDB primary
+ * - localStorage fallback (so Save never "just fails")
  */
-const LIMIT_X = 280;
-const LIMIT_FB = 2000;
-const LIMIT_LI = 2000;
 
-/**
- * IndexedDB
- * IMPORTANT: bump version to avoid "requested version is less than existing version" errors
- */
+/* ----------------------------- Storage Layer ----------------------------- */
+
 const DB_NAME = "sparksocial";
-const DB_VERSION = 3;
-const STORE_CURRENT = "current";
-const STORE_DRAFTS = "drafts";
+const DB_VERSION = 3; // bump when schema changes to avoid VersionError
+const STORE_CURRENT = "current"; // single autosave slot
+const STORE_DRAFTS = "drafts"; // multiple saved drafts
 const KEY_CURRENT = "current";
 
 async function getDb() {
   return openDB(DB_NAME, DB_VERSION, {
-    upgrade(db, oldVersion) {
-      // v1/v2 might exist in the wild; make upgrades additive + safe
+    upgrade(db) {
+      // current autosave store
       if (!db.objectStoreNames.contains(STORE_CURRENT)) {
         db.createObjectStore(STORE_CURRENT);
       }
+      // drafts store with keyPath
       if (!db.objectStoreNames.contains(STORE_DRAFTS)) {
-        db.createObjectStore(STORE_DRAFTS, { keyPath: "id", autoIncrement: true });
+        db.createObjectStore(STORE_DRAFTS, { keyPath: "id" });
       }
     },
   });
 }
 
-async function saveCurrent(value) {
-  const db = await getDb();
-  await db.put(STORE_CURRENT, value, KEY_CURRENT);
+function safeJsonParse(v) {
+  try {
+    return JSON.parse(v);
+  } catch {
+    return null;
+  }
+}
+
+function lsKeyCurrent() {
+  return `${DB_NAME}:${STORE_CURRENT}:${KEY_CURRENT}`;
+}
+
+function lsKeyDrafts() {
+  return `${DB_NAME}:${STORE_DRAFTS}`;
+}
+
+async function saveCurrent(payload) {
+  try {
+    const db = await getDb();
+    await db.put(STORE_CURRENT, payload, KEY_CURRENT);
+    return { ok: true };
+  } catch (e) {
+    // fallback
+    try {
+      localStorage.setItem(lsKeyCurrent(), JSON.stringify(payload));
+      return { ok: true, fallback: true };
+    } catch (e2) {
+      return { ok: false, error: e2 || e };
+    }
+  }
 }
 
 async function loadCurrent() {
-  const db = await getDb();
-  return db.get(STORE_CURRENT, KEY_CURRENT);
-}
-
-async function createDraft(value) {
-  const db = await getDb();
-  const now = Date.now();
-  const record = {
-    ...value,
-    createdAt: now,
-    updatedAt: now,
-  };
-  const id = await db.add(STORE_DRAFTS, record);
-  return id;
+  try {
+    const db = await getDb();
+    const v = await db.get(STORE_CURRENT, KEY_CURRENT);
+    if (v) return { ok: true, value: v };
+  } catch {
+    // ignore and fallback
+  }
+  const ls = localStorage.getItem(lsKeyCurrent());
+  const parsed = ls ? safeJsonParse(ls) : null;
+  return { ok: true, value: parsed || null, fallback: !!parsed };
 }
 
 async function listDrafts() {
-  const db = await getDb();
-  const all = await db.getAll(STORE_DRAFTS);
-  return (all || []).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+  try {
+    const db = await getDb();
+    const all = await db.getAll(STORE_DRAFTS);
+    // newest first
+    all.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    return { ok: true, value: all };
+  } catch (e) {
+    // fallback to localStorage
+    const ls = localStorage.getItem(lsKeyDrafts());
+    const parsed = ls ? safeJsonParse(ls) : [];
+    if (Array.isArray(parsed)) {
+      parsed.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      return { ok: true, value: parsed, fallback: true };
+    }
+    return { ok: false, error: e };
+  }
 }
 
-async function getDraft(id) {
-  const db = await getDb();
-  return db.get(STORE_DRAFTS, Number(id));
+async function upsertDraft(draft) {
+  try {
+    const db = await getDb();
+    await db.put(STORE_DRAFTS, draft);
+    return { ok: true };
+  } catch (e) {
+    // localStorage fallback: keep array
+    try {
+      const ls = localStorage.getItem(lsKeyDrafts());
+      const parsed = ls ? safeJsonParse(ls) : [];
+      const arr = Array.isArray(parsed) ? parsed : [];
+      const idx = arr.findIndex((x) => x.id === draft.id);
+      if (idx >= 0) arr[idx] = draft;
+      else arr.unshift(draft);
+      localStorage.setItem(lsKeyDrafts(), JSON.stringify(arr));
+      return { ok: true, fallback: true };
+    } catch (e2) {
+      return { ok: false, error: e2 || e };
+    }
+  }
 }
 
 async function deleteDraft(id) {
-  const db = await getDb();
-  return db.delete(STORE_DRAFTS, Number(id));
+  try {
+    const db = await getDb();
+    await db.delete(STORE_DRAFTS, id);
+    return { ok: true };
+  } catch (e) {
+    // localStorage fallback
+    try {
+      const ls = localStorage.getItem(lsKeyDrafts());
+      const parsed = ls ? safeJsonParse(ls) : [];
+      const arr = Array.isArray(parsed) ? parsed : [];
+      const next = arr.filter((x) => x.id !== id);
+      localStorage.setItem(lsKeyDrafts(), JSON.stringify(next));
+      return { ok: true, fallback: true };
+    } catch (e2) {
+      return { ok: false, error: e2 || e };
+    }
+  }
 }
 
-/**
- * Helpers
- */
+async function wipeAllStorage() {
+  // optional utility if you ever want a "Reset Storage" later
+  try {
+    const db = await getDb();
+    const tx = db.transaction([STORE_CURRENT, STORE_DRAFTS], "readwrite");
+    await tx.objectStore(STORE_CURRENT).clear();
+    await tx.objectStore(STORE_DRAFTS).clear();
+    await tx.done;
+  } catch {
+    // ignore
+  }
+  try {
+    localStorage.removeItem(lsKeyCurrent());
+    localStorage.removeItem(lsKeyDrafts());
+  } catch {
+    // ignore
+  }
+}
+
+/* ----------------------------- Text Utilities ---------------------------- */
+
 function clampText(text, max) {
   const cleaned = (text || "").replace(/\s+/g, " ").trim();
   if (!cleaned) return "";
@@ -82,62 +170,135 @@ function clampText(text, max) {
   return cleaned.slice(0, max - 1) + "…";
 }
 
-function firstNonEmptyLine(text) {
-  const lines = (text || "").split("\n").map((l) => l.trim());
-  return lines.find((l) => l.length > 0) || "Untitled draft";
-}
+const LIMITS = {
+  x: 280,
+  facebook: 2000,
+  linkedin: 2000,
+};
 
 function buildOutputs(blogText, tone) {
+  const firstLine = (blogText || "").split("\n")[0] || "";
+  const titleGuess = clampText(firstLine, 80);
   const summary = clampText(blogText, 240);
   const baseHashtag = "#ITLeadership";
 
   const professional = {
-    twitter: clampText(`${summary} ${baseHashtag}`.trim(), LIMIT_X),
-    facebook: clampText(
-      `I published a new article and wanted to share one takeaway:\n\n${summary}\n\nWhat’s your perspective on this?`,
-      LIMIT_FB
-    ),
-    linkedin: clampText(
-      `New article reflection:\n\n${summary}\n\nI’d value input from others who have worked through similar challenges.`,
-      LIMIT_LI
-    ),
+    twitter: `${summary} ${baseHashtag}`.trim(),
+    facebook: `I published a new article and wanted to share one takeaway:\n\n${summary}\n\nWhat’s your perspective on this?`,
+    linkedin: `New article reflection:\n\n${summary}\n\nI’d value input from others who have worked through similar challenges.`,
   };
 
   const conversational = {
-    twitter: clampText(`${summary} What do you think?`.trim(), LIMIT_X),
-    facebook: clampText(
-      `Quick thought from something I wrote recently:\n\n${summary}\n\nIf you’ve been there too, I’d love to hear what you learned.`,
-      LIMIT_FB
-    ),
-    linkedin: clampText(
-      `Something I’ve been thinking about lately:\n\n${summary}\n\nWhat would you add from your experience?`,
-      LIMIT_LI
-    ),
+    twitter: `${summary} What do you think?`.trim(),
+    facebook: `Quick thought from something I wrote recently:\n\n${summary}\n\nIf you’ve been there too, I’d love to hear what you learned.`,
+    linkedin: `Something I’ve been thinking about lately:\n\n${summary}\n\nWhat would you add from your experience?`,
   };
 
   const promotional = {
-    twitter: clampText(`New post: ${clampText(blogText, 200)} Read more soon.`, LIMIT_X),
-    facebook: clampText(
-      `New post is live.\n\n${summary}\n\nIf you want the full context, I’ll share the link next.`,
-      LIMIT_FB
-    ),
-    linkedin: clampText(
-      `New post published.\n\n${summary}\n\nIf you’d like to read it, I’m happy to share the link.`,
-      LIMIT_LI
-    ),
+    twitter: `New post: ${clampText(blogText, 200)} Read more soon.`,
+    facebook: `New post is live.\n\n${summary}\n\nIf you want the full context, I’ll share the link next.`,
+    linkedin: `New post published.\n\n${summary}\n\nIf you’d like to read it, I’m happy to share the link.`,
   };
 
   const map = { professional, conversational, promotional };
-  return map[tone] || professional;
+  const chosen = map[tone] || professional;
+
+  return {
+    ...chosen,
+    meta: { titleGuess },
+  };
+}
+
+async function copyToClipboard(text) {
+  if (!text) return;
+  // clipboard API requires https (GitHub Pages is fine)
+  await navigator.clipboard.writeText(text);
+}
+
+/* ------------------------------- UI Pieces ------------------------------- */
+
+function Layout({ children }) {
+  const [navOpen, setNavOpen] = React.useState(false);
+
+  // close drawer on route clicks (mobile)
+  function onNavClick() {
+    setNavOpen(false);
+  }
+
+  return (
+    <div className={`app ${navOpen ? "navOpen" : ""}`}>
+      {/* Mobile top bar */}
+      <div className="mobileTopbar">
+        <button
+          className="iconButton"
+          aria-label="Open menu"
+          onClick={() => setNavOpen(true)}
+        >
+          ☰
+        </button>
+        <div className="mobileTitle">Social Media Management</div>
+      </div>
+
+      {/* Backdrop for mobile drawer */}
+      <button
+        className="navBackdrop"
+        aria-label="Close menu"
+        onClick={() => setNavOpen(false)}
+      />
+
+      <aside className="sidebar">
+        <div className="sidebarTop">
+          <h2>SparkSocial</h2>
+          <button
+            className="iconButton closeButton"
+            aria-label="Close menu"
+            onClick={() => setNavOpen(false)}
+          >
+            ✕
+          </button>
+        </div>
+
+        <nav>
+          <NavLink to="/inbox" end onClick={onNavClick}>
+            Inbox
+          </NavLink>
+          <NavLink to="/drafts" onClick={onNavClick}>
+            Drafts
+          </NavLink>
+          <NavLink to="/scheduler" onClick={onNavClick}>
+            Scheduler
+          </NavLink>
+          <NavLink to="/connections" onClick={onNavClick}>
+            Connections
+          </NavLink>
+          <NavLink to="/logs" onClick={onNavClick}>
+            Logs
+          </NavLink>
+        </nav>
+      </aside>
+
+      <main className="main">
+        <header className="header">
+          <div className="headerTitle">Social Media Management</div>
+          <div className="headerGlow" aria-hidden="true" />
+        </header>
+
+        <div className="content">{children}</div>
+      </main>
+    </div>
+  );
 }
 
 function PreviewCard({ variant, body }) {
+  // Show the whole post in preview (no truncation)
+  const safe = body || "Preview will appear here.";
+
   if (variant === "x") {
     return (
       <div className="previewCard x">
         <div className="previewTop">
           <div className="avatar">S</div>
-          <div className="metaBlock">
+          <div>
             <div className="nameRow">
               <span className="displayName">SparkSocial</span>
               <span className="handle">@sparkwaveitservice</span>
@@ -145,7 +306,7 @@ function PreviewCard({ variant, body }) {
             <div className="metaRow">Just now</div>
           </div>
         </div>
-        <div className="previewBody">{body || "Preview will appear here."}</div>
+        <div className="previewBody">{safe}</div>
       </div>
     );
   }
@@ -155,7 +316,7 @@ function PreviewCard({ variant, body }) {
       <div className="previewCard fb">
         <div className="previewTop">
           <div className="avatar">S</div>
-          <div className="metaBlock">
+          <div>
             <div className="nameRow">
               <span className="displayName">SparkSocial</span>
               <span className="metaDot">·</span>
@@ -164,7 +325,7 @@ function PreviewCard({ variant, body }) {
             <div className="metaRow">Public</div>
           </div>
         </div>
-        <div className="previewBody">{body || "Preview will appear here."}</div>
+        <div className="previewBody">{safe}</div>
         <div className="previewFooter">
           <span>Like</span>
           <span>Comment</span>
@@ -178,14 +339,14 @@ function PreviewCard({ variant, body }) {
     <div className="previewCard li">
       <div className="previewTop">
         <div className="avatar">S</div>
-        <div className="metaBlock">
+        <div>
           <div className="nameRow">
             <span className="displayName">SparkSocial</span>
           </div>
           <div className="metaRow">IT Services · Just now</div>
         </div>
       </div>
-      <div className="previewBody">{body || "Preview will appear here."}</div>
+      <div className="previewBody">{safe}</div>
       <div className="previewFooter">
         <span>Like</span>
         <span>Comment</span>
@@ -196,90 +357,49 @@ function PreviewCard({ variant, body }) {
   );
 }
 
-function PlatformBlock({ title, value, setValue, limit, previewVariant, rightSlot }) {
+function CounterPill({ value, limit }) {
   const count = (value || "").length;
   const over = count > limit;
-
   return (
-    <div className="platformBlock">
+    <span className={`countPill ${over ? "over" : ""}`}>
+      {count}/{limit}
+    </span>
+  );
+}
+
+function PlatformCard({
+  title,
+  value,
+  setValue,
+  limit,
+  previewVariant,
+  onCopy,
+}) {
+  return (
+    <section className="platformCard">
       <div className="platformHeader">
         <h3>{title}</h3>
         <div className="platformActions">
-          <span className={over ? "count over" : "count"}>
-            {count}/{limit}
-          </span>
-          {rightSlot}
+          <CounterPill value={value} limit={limit} />
+          <button className="btnSecondary" onClick={onCopy}>
+            Copy
+          </button>
         </div>
       </div>
 
       <textarea
-        className="platformText"
+        className="platformTextarea"
         rows={5}
         value={value}
         onChange={(e) => setValue(e.target.value)}
       />
 
       <PreviewCard variant={previewVariant} body={value} />
-    </div>
+    </section>
   );
 }
 
-function Layout({ children }) {
-  const [navOpen, setNavOpen] = React.useState(false);
-
-  React.useEffect(() => {
-    const onKey = (e) => {
-      if (e.key === "Escape") setNavOpen(false);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
-
-  return (
-    <div className="app">
-      <button className="hamburger" onClick={() => setNavOpen(true)} aria-label="Open menu">
-        <span />
-        <span />
-        <span />
-      </button>
-
-      <div className={navOpen ? "scrim show" : "scrim"} onClick={() => setNavOpen(false)} />
-
-      <aside className={navOpen ? "sidebar open" : "sidebar"}>
-        <div className="sidebarTop">
-          <h2>SparkSocial</h2>
-          <button className="sidebarClose" onClick={() => setNavOpen(false)} aria-label="Close menu">
-            ×
-          </button>
-        </div>
-
-        <nav onClick={() => setNavOpen(false)}>
-          <NavLink to="/inbox" end>
-            Inbox
-          </NavLink>
-          <NavLink to="/drafts">Drafts</NavLink>
-          <NavLink to="/scheduler">Scheduler</NavLink>
-          <NavLink to="/connections">Connections</NavLink>
-          <NavLink to="/logs">Logs</NavLink>
-        </nav>
-      </aside>
-
-      <main className="main">
-        <header className="header">
-          <div className="headerInner">
-            <div>
-              <div className="headerTitle">Social Media Management</div>
-              <div className="headerSub">Draft, generate, preview, and save</div>
-            </div>
-            <div className="headerGlow" />
-          </div>
-        </header>
-
-        <div className="content">{children}</div>
-      </main>
-    </div>
-  );
-}
+/* --------------------------------- Pages -------------------------------- */
 
 function Inbox() {
   const [tone, setTone] = React.useState("professional");
@@ -289,276 +409,331 @@ function Inbox() {
   const [linkedin, setLinkedin] = React.useState("");
 
   const [draftStatus, setDraftStatus] = React.useState("Ready");
-  const [saving, setSaving] = React.useState(false);
+  const [toast, setToast] = React.useState("");
 
-  const saveTimer = React.useRef(null);
-
-  async function copy(text) {
-    if (!text) return;
-    try {
-      await navigator.clipboard.writeText(text);
-      setDraftStatus("Copied");
-      setTimeout(() => setDraftStatus("Ready"), 900);
-    } catch {
-      setDraftStatus("Copy failed");
-      setTimeout(() => setDraftStatus("Ready"), 1200);
-    }
+  function showToast(msg) {
+    setToast(msg);
+    window.clearTimeout(showToast._t);
+    showToast._t = window.setTimeout(() => setToast(""), 1600);
   }
 
   function generatePosts() {
     if (!blogText.trim()) {
-      setDraftStatus("Paste a blog post first");
-      setTimeout(() => setDraftStatus("Ready"), 1200);
+      showToast("Paste blog text first");
       return;
     }
     const out = buildOutputs(blogText, tone);
     setTwitter(out.twitter);
     setFacebook(out.facebook);
     setLinkedin(out.linkedin);
-    setDraftStatus("Generated");
-    setTimeout(() => setDraftStatus("Ready"), 1200);
+    showToast("Generated");
   }
 
   async function saveToDrafts() {
-    if (!blogText.trim() && !twitter && !facebook && !linkedin) {
-      setDraftStatus("Nothing to save");
-      setTimeout(() => setDraftStatus("Ready"), 1200);
-      return;
-    }
+    const id =
+      typeof crypto !== "undefined" && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `draft_${Date.now()}_${Math.random().toString(16).slice(2)}`;
 
-    setSaving(true);
+    const firstLine = (blogText || "").split("\n")[0] || "";
+    const title = clampText(firstLine.trim() || "Untitled draft", 80);
+
+    const draft = {
+      id,
+      title,
+      tone,
+      blogText,
+      twitter,
+      facebook,
+      linkedin,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+
     setDraftStatus("Saving…");
-
-    try {
-      const title = firstNonEmptyLine(blogText);
-      await createDraft({ title, tone, blogText, twitter, facebook, linkedin });
-      setDraftStatus("Saved to Drafts");
-      setTimeout(() => setDraftStatus("Ready"), 1400);
-    } catch (e) {
+    const res = await upsertDraft(draft);
+    if (res.ok) {
+      setDraftStatus("Saved");
+      showToast(res.fallback ? "Saved (fallback)" : "Saved to Drafts");
+      window.setTimeout(() => setDraftStatus("Ready"), 1400);
+    } else {
+      console.error("Draft save failed:", res.error);
       setDraftStatus("Save failed");
-      setTimeout(() => setDraftStatus("Ready"), 1600);
-      console.error("Draft save failed:", e);
-    } finally {
-      setSaving(false);
+      showToast("Save failed");
+      window.setTimeout(() => setDraftStatus("Ready"), 1600);
     }
   }
 
-  // Load current autosave on first render
+  async function onCopy(text) {
+    try {
+      await copyToClipboard(text);
+      showToast("Copied");
+    } catch (e) {
+      console.error(e);
+      showToast("Copy failed");
+    }
+  }
+
+  // load saved current draft on first render
   React.useEffect(() => {
     (async () => {
-      try {
-        const saved = await loadCurrent();
-        if (!saved) return;
-        setTone(saved.tone || "professional");
-        setBlogText(saved.blogText || "");
-        setTwitter(saved.twitter || "");
-        setFacebook(saved.facebook || "");
-        setLinkedin(saved.linkedin || "");
-      } catch (e) {
-        console.error("Draft load failed:", e);
-        setDraftStatus("Autosave unavailable");
-        setTimeout(() => setDraftStatus("Ready"), 1400);
-      }
+      const res = await loadCurrent();
+      const saved = res.value;
+      if (!saved) return;
+      setTone(saved.tone || "professional");
+      setBlogText(saved.blogText || "");
+      setTwitter(saved.twitter || "");
+      setFacebook(saved.facebook || "");
+      setLinkedin(saved.linkedin || "");
     })();
   }, []);
 
-  // Debounced autosave whenever something changes
+  // autosave "current" (not the Drafts list) whenever things change
   React.useEffect(() => {
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-
-    saveTimer.current = setTimeout(() => {
-      (async () => {
-        try {
-          setSaving(true);
-          await saveCurrent({ tone, blogText, twitter, facebook, linkedin });
-        } catch (e) {
-          console.error("Autosave failed:", e);
-          setDraftStatus("Autosave failed");
-          setTimeout(() => setDraftStatus("Ready"), 1400);
-        } finally {
-          setSaving(false);
-        }
-      })();
-    }, 450);
-
-    return () => {
-      if (saveTimer.current) clearTimeout(saveTimer.current);
-    };
+    (async () => {
+      const payload = { tone, blogText, twitter, facebook, linkedin };
+      const res = await saveCurrent(payload);
+      if (!res.ok) {
+        console.error("Autosave failed:", res.error);
+        setDraftStatus("Autosave failed");
+        window.setTimeout(() => setDraftStatus("Ready"), 1800);
+      }
+    })();
   }, [tone, blogText, twitter, facebook, linkedin]);
 
   return (
-    <div className="page">
-      <div className="pageTop">
-        <h2 className="pageTitle">Blog → Social Media Generator</h2>
+    <div>
+      <h2>Blog → Social Media Generator</h2>
 
-        <div className="toolbar">
-          <div className="toolbarLeft">
-            <label className="toolbarLabel">Tone</label>
-            <select value={tone} onChange={(e) => setTone(e.target.value)}>
-              <option value="professional">Professional</option>
-              <option value="conversational">Conversational</option>
-              <option value="promotional">Promotional</option>
-            </select>
-            <span className="statusPill">
-              {saving ? "Saving…" : draftStatus}
-            </span>
-          </div>
+      <div className="toolbar">
+        <div className="toolbarLeft">
+          <label className="toolbarLabel">Tone</label>
+          <select value={tone} onChange={(e) => setTone(e.target.value)}>
+            <option value="professional">Professional</option>
+            <option value="conversational">Conversational</option>
+            <option value="promotional">Promotional</option>
+          </select>
 
-          <div className="toolbarRight">
-            <button className="btnGhost" onClick={saveToDrafts} disabled={saving}>
-              Save to Drafts
-            </button>
-            <button className="btnPrimary" onClick={generatePosts}>
-              Generate
-            </button>
-          </div>
+          <span className="statusPill" title="Draft status">
+            {draftStatus}
+          </span>
+        </div>
+
+        <div className="toolbarRight">
+          <button className="btnSecondary" onClick={saveToDrafts}>
+            Save to Drafts
+          </button>
+          <button className="btnPrimary" onClick={generatePosts}>
+            Generate
+          </button>
         </div>
       </div>
 
       <textarea
         className="blogInput"
         rows={10}
-        placeholder="Paste your blog article or newsletter text here…"
+        placeholder="Paste your blog article or newsletter text here..."
         value={blogText}
         onChange={(e) => setBlogText(e.target.value)}
       />
 
       <div className="platformGrid">
-        <PlatformBlock
+        <PlatformCard
           title="Twitter / X"
           value={twitter}
-          setValue={(v) => setTwitter(clampText(v, LIMIT_X))}
-          limit={LIMIT_X}
+          setValue={setTwitter}
+          limit={LIMITS.x}
           previewVariant="x"
-          rightSlot={<button className="btnSmall" onClick={() => copy(twitter)}>Copy</button>}
+          onCopy={() => onCopy(twitter)}
         />
 
-        <PlatformBlock
+        <PlatformCard
           title="Facebook"
           value={facebook}
-          setValue={(v) => setFacebook(clampText(v, LIMIT_FB))}
-          limit={LIMIT_FB}
+          setValue={setFacebook}
+          limit={LIMITS.facebook}
           previewVariant="fb"
-          rightSlot={<button className="btnSmall" onClick={() => copy(facebook)}>Copy</button>}
+          onCopy={() => onCopy(facebook)}
         />
 
-        <PlatformBlock
+        <PlatformCard
           title="LinkedIn"
           value={linkedin}
-          setValue={(v) => setLinkedin(clampText(v, LIMIT_LI))}
-          limit={LIMIT_LI}
+          setValue={setLinkedin}
+          limit={LIMITS.linkedin}
           previewVariant="li"
-          rightSlot={<button className="btnSmall" onClick={() => copy(linkedin)}>Copy</button>}
+          onCopy={() => onCopy(linkedin)}
         />
       </div>
+
+      {/* small toast */}
+      {toast ? <div className="toast">{toast}</div> : null}
     </div>
   );
 }
 
 function Drafts() {
-  const nav = useNavigate();
   const [items, setItems] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
-  const [msg, setMsg] = React.useState("Ready");
+  const [toast, setToast] = React.useState("");
+
+  function showToast(msg) {
+    setToast(msg);
+    window.clearTimeout(showToast._t);
+    showToast._t = window.setTimeout(() => setToast(""), 1600);
+  }
 
   async function refresh() {
     setLoading(true);
-    try {
-      const all = await listDrafts();
-      setItems(all);
-    } catch (e) {
-      console.error(e);
-      setMsg("Failed to load drafts");
-      setTimeout(() => setMsg("Ready"), 1500);
-    } finally {
-      setLoading(false);
-    }
+    const res = await listDrafts();
+    if (res.ok) setItems(res.value || []);
+    else console.error(res.error);
+    setLoading(false);
   }
 
   React.useEffect(() => {
     refresh();
   }, []);
 
-  async function onLoad(id) {
+  function formatDate(ts) {
+    if (!ts) return "";
     try {
-      const d = await getDraft(id);
-      if (!d) return;
-      await saveCurrent({
-        tone: d.tone || "professional",
-        blogText: d.blogText || "",
-        twitter: d.twitter || "",
-        facebook: d.facebook || "",
-        linkedin: d.linkedin || "",
-      });
-      setMsg("Loaded into Inbox");
-      setTimeout(() => setMsg("Ready"), 1200);
-      nav("/inbox");
-    } catch (e) {
-      console.error(e);
-      setMsg("Load failed");
-      setTimeout(() => setMsg("Ready"), 1500);
+      return new Date(ts).toLocaleString();
+    } catch {
+      return "";
     }
   }
 
   async function onDelete(id) {
-    if (!confirm("Delete this draft?")) return;
-    try {
-      await deleteDraft(id);
-      setMsg("Deleted");
-      setTimeout(() => setMsg("Ready"), 1200);
+    const res = await deleteDraft(id);
+    if (res.ok) {
+      showToast("Deleted");
       refresh();
-    } catch (e) {
-      console.error(e);
-      setMsg("Delete failed");
-      setTimeout(() => setMsg("Ready"), 1500);
+    } else {
+      console.error(res.error);
+      showToast("Delete failed");
+    }
+  }
+
+  async function onLoadToInbox(draft) {
+    // set current and let Inbox load it on next visit
+    const payload = {
+      tone: draft.tone || "professional",
+      blogText: draft.blogText || "",
+      twitter: draft.twitter || "",
+      facebook: draft.facebook || "",
+      linkedin: draft.linkedin || "",
+    };
+    const res = await saveCurrent(payload);
+    if (res.ok) {
+      showToast("Loaded into Inbox");
+      // optional: also scroll to top
+      window.location.hash = "#/inbox";
+    } else {
+      console.error(res.error);
+      showToast("Load failed");
+    }
+  }
+
+  async function onDuplicate(draft) {
+    const id =
+      typeof crypto !== "undefined" && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `draft_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+
+    const copy = {
+      ...draft,
+      id,
+      title: `${draft.title || "Untitled"} (copy)`,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+
+    const res = await upsertDraft(copy);
+    if (res.ok) {
+      showToast("Duplicated");
+      refresh();
+    } else {
+      console.error(res.error);
+      showToast("Duplicate failed");
     }
   }
 
   return (
-    <div className="page">
-      <div className="draftsTop">
-        <h2 className="pageTitle">Drafts</h2>
-        <span className="statusPill">{loading ? "Loading…" : msg}</span>
+    <div>
+      <div className="pageHeaderRow">
+        <h2>Drafts</h2>
+        <button className="btnSecondary" onClick={refresh}>
+          Refresh
+        </button>
       </div>
 
-      {items.length === 0 && !loading ? (
-        <div className="emptyState">
-          <div className="emptyTitle">No drafts yet</div>
-          <div className="emptySub">Use “Save to Drafts” in Inbox to store snapshots.</div>
+      {loading ? (
+        <div className="muted">Loading drafts…</div>
+      ) : items.length === 0 ? (
+        <div className="muted">
+          No drafts yet. Go to Inbox and click “Save to Drafts”.
         </div>
       ) : (
         <div className="draftList">
           {items.map((d) => (
-            <div className="draftCard" key={d.id}>
-              <div className="draftMeta">
+            <div className="draftRow" key={d.id}>
+              <div className="draftInfo">
                 <div className="draftTitle">{d.title || "Untitled draft"}</div>
-                <div className="draftSub">
-                  {new Date(d.updatedAt || d.createdAt || Date.now()).toLocaleString()}
-                  {" · "}
-                  {d.tone || "professional"}
+                <div className="draftMeta">
+                  <span className="chip">{d.tone || "professional"}</span>
+                  <span className="muted">
+                    {formatDate(d.updatedAt || d.createdAt)}
+                  </span>
                 </div>
               </div>
 
               <div className="draftActions">
-                <button className="btnSmall" onClick={() => onLoad(d.id)}>Load</button>
-                <button className="btnSmall danger" onClick={() => onDelete(d.id)}>Delete</button>
+                <button className="btnSecondary" onClick={() => onLoadToInbox(d)}>
+                  Load to Inbox
+                </button>
+                <button className="btnSecondary" onClick={() => onDuplicate(d)}>
+                  Duplicate
+                </button>
+                <button className="btnDanger" onClick={() => onDelete(d.id)}>
+                  Delete
+                </button>
               </div>
             </div>
           ))}
         </div>
       )}
+
+      {toast ? <div className="toast">{toast}</div> : null}
     </div>
   );
 }
 
 function Scheduler() {
-  return <div className="page"><h2 className="pageTitle">Scheduler</h2><div className="muted">Coming next.</div></div>;
+  return (
+    <div>
+      <h2>Scheduler</h2>
+      <div className="muted">Coming next.</div>
+    </div>
+  );
 }
+
 function Connections() {
-  return <div className="page"><h2 className="pageTitle">Connections</h2><div className="muted">Coming next.</div></div>;
+  return (
+    <div>
+      <h2>Connections</h2>
+      <div className="muted">Coming next.</div>
+    </div>
+  );
 }
+
 function Logs() {
-  return <div className="page"><h2 className="pageTitle">Logs</h2><div className="muted">Coming next.</div></div>;
+  return (
+    <div>
+      <h2>Logs</h2>
+      <div className="muted">Coming next.</div>
+    </div>
+  );
 }
 
 export default function App() {
