@@ -1,619 +1,568 @@
-/* =========================
-   Base + theme tokens
-========================= */
-* { box-sizing: border-box; }
-html, body { height: 100%; margin: 0; }
+/* App.css
+   SparkSocial UI
+   Dark SaaS
+   Glass cards
+   Animated gradient header
+   Neon hover glow
+   Responsive shell with hamburger overlay
+*/
+
+/* ---------- Reset ---------- */
+* {
+  box-sizing: border-box;
+}
+
+html,
 body {
-  background: #070a10;
-  color: #eaf0ff;
-  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  height: 100%;
+  margin: 0;
+}
+
+:root {
+  color-scheme: dark;
+
+  /* Background */
+  --bg-0: #060914;
+  --bg-1: #070b18;
+  --bg-2: #0a1022;
+
+  /* Text */
+  --text-0: rgba(255, 255, 255, 0.96);
+  --text-1: rgba(255, 255, 255, 0.78);
+  --text-2: rgba(255, 255, 255, 0.62);
+
+  /* Borders + glass */
+  --border: rgba(255, 255, 255, 0.10);
+  --border-soft: rgba(255, 255, 255, 0.06);
+  --glass: rgba(14, 18, 34, 0.52);
+  --glass-2: rgba(12, 16, 30, 0.42);
+
+  /* Neon accents */
+  --a1: #7c5cff; /* violet */
+  --a2: #23d5ff; /* cyan */
+  --a3: #15ffa8; /* neon mint */
+
+  --shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
+  --shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.45);
+
+  /* Typography scale */
+  --fs-0: 14px;
+  --fs-1: 16px;
+  --fs-2: 18px;
+  --fs-3: 22px;
+  --fs-4: 30px;
+
+  --r-1: 14px;
+  --r-2: 18px;
+  --r-3: 22px;
+}
+
+/* Make sure the root can shrink (this fixes weird horizontal overflow) */
+#root {
+  min-height: 100%;
+}
+
+/* ---------- Body background ---------- */
+body {
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  background: radial-gradient(1200px 800px at 16% 0%, rgba(124, 92, 255, 0.22), transparent 60%),
+    radial-gradient(1000px 700px at 90% 10%, rgba(35, 213, 255, 0.18), transparent 55%),
+    radial-gradient(900px 700px at 55% 100%, rgba(21, 255, 168, 0.10), transparent 55%),
+    linear-gradient(180deg, var(--bg-0), var(--bg-2));
+  color: var(--text-0);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   overflow-x: hidden;
 }
 
-:root{
-  --bg0:#070a10;
-  --bg1:#0a1020;
-  --glass: rgba(255,255,255,.06);
-  --glass2: rgba(255,255,255,.09);
-  --stroke: rgba(255,255,255,.12);
-  --stroke2: rgba(255,255,255,.18);
-
-  --text: #eaf0ff;
-  --muted: rgba(234,240,255,.72);
-
-  --neonA: #6d5cff;
-  --neonB: #14f1d9;
-  --neonC: #ff3df2;
-
-  --shadow: 0 18px 55px rgba(0,0,0,.55);
-  --shadow2: 0 10px 30px rgba(0,0,0,.45);
-
-  --r12: 12px;
-  --r16: 16px;
-  --r20: 20px;
-}
-
-/* =========================
-   App shell
-========================= */
-.app{
+/* ---------- App shell ---------- */
+/* Your Layout component uses: <div className="app"> <aside className="sidebar"> ... <main className="main"> ... */
+.app {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 280px 1fr;
   width: 100%;
-  min-height: 100vh;
-  display: flex;
 }
 
-/* Hamburger */
-.hamburger{
-  position: fixed;
-  top: 14px;
-  left: 14px;
-  z-index: 50;
-  width: 46px;
-  height: 46px;
-  border-radius: 14px;
-  border: 1px solid var(--stroke);
-  background: rgba(255,255,255,.06);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  display: none;
-  cursor: pointer;
-  box-shadow: var(--shadow2);
-}
-.hamburger span{
-  display: block;
-  height: 2px;
-  width: 18px;
-  margin: 4px auto;
-  background: rgba(234,240,255,.9);
-  border-radius: 99px;
-}
-.hamburger:hover{
-  box-shadow:
-    0 0 0 1px rgba(109,92,255,.25),
-    0 0 28px rgba(109,92,255,.22),
-    var(--shadow2);
-}
-
-/* Mobile scrim */
-.scrim{
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,.55);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity .18s ease;
-  z-index: 40;
-}
-.scrim.show{
-  opacity: 1;
-  pointer-events: auto;
-}
-
-/* Sidebar */
-.sidebar{
-  width: 260px;
-  min-height: 100vh;
-  padding: 16px 14px;
-  background: linear-gradient(180deg, rgba(13,19,34,.92) 0%, rgba(8,10,16,.96) 100%);
-  border-right: 1px solid rgba(255,255,255,.08);
+/* ---------- Sidebar ---------- */
+.sidebar {
   position: sticky;
   top: 0;
-  align-self: flex-start;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  height: 100vh;
+  padding: 22px 16px;
+  border-right: 1px solid var(--border-soft);
+
+  background: linear-gradient(180deg, rgba(10, 14, 28, 0.74), rgba(8, 10, 18, 0.52));
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
 }
-.sidebarTop{
-  display:flex;
-  align-items:center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 10px;
+
+.sidebar h2 {
+  margin: 0 0 18px;
+  font-size: var(--fs-3);
+  font-weight: 900;
+  letter-spacing: 0.2px;
 }
-.sidebar h2{
-  margin: 0;
-  font-size: 22px;
-  letter-spacing: .3px;
-  font-weight: 850;
-}
-.sidebarClose{
-  display:none;
-  width: 40px;
-  height: 40px;
-  border-radius: 14px;
-  border: 1px solid var(--stroke);
-  background: rgba(255,255,255,.06);
-  color: var(--text);
-  cursor: pointer;
-}
-.sidebar nav{
-  display:flex;
+
+.sidebar nav {
+  display: flex;
   flex-direction: column;
   gap: 10px;
-  margin-top: 10px;
 }
-.sidebar a{
-  color: rgba(234,240,255,.72);
+
+.sidebar a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
   text-decoration: none;
+  color: var(--text-1);
+
   padding: 12px 12px;
   border-radius: 14px;
-  font-weight: 750;
-  position: relative;
-  transition: transform .12s ease, box-shadow .12s ease, background .12s ease;
+
+  border: 1px solid transparent;
+  background: transparent;
+
+  font-weight: 800;
+  letter-spacing: 0.2px;
+
+  transition: transform 120ms ease, background 160ms ease, border-color 160ms ease, box-shadow 160ms ease,
+    color 160ms ease;
 }
-.sidebar a:hover{
-  background: rgba(255,255,255,.06);
-  box-shadow:
-    0 0 0 1px rgba(20,241,217,.14),
-    0 0 22px rgba(20,241,217,.10);
+
+.sidebar a:hover {
+  color: var(--text-0);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 0 1px rgba(124, 92, 255, 0.15), 0 0 22px rgba(124, 92, 255, 0.18);
   transform: translateY(-1px);
-  color: rgba(234,240,255,.95);
-}
-.sidebar a.active{
-  background: rgba(109,92,255,.16);
-  box-shadow:
-    0 0 0 1px rgba(109,92,255,.28),
-    0 0 26px rgba(109,92,255,.18);
-  color: rgba(234,240,255,1);
 }
 
-/* Main */
-.main{
-  flex: 1;
-  min-width: 0;
-  min-height: 100vh;
-  display:flex;
+.sidebar a.active {
+  color: var(--text-0);
+  background: linear-gradient(90deg, rgba(124, 92, 255, 0.22), rgba(35, 213, 255, 0.08));
+  border-color: rgba(124, 92, 255, 0.25);
+  box-shadow: 0 0 0 1px rgba(124, 92, 255, 0.18), 0 0 26px rgba(35, 213, 255, 0.14);
+}
+
+/* ---------- Main ---------- */
+.main {
+  min-width: 0; /* critical for grid children to shrink; prevents weird side overflow */
+  display: flex;
   flex-direction: column;
-  background:
-    radial-gradient(900px 700px at 10% 0%, rgba(109,92,255,.22), rgba(0,0,0,0)),
-    radial-gradient(800px 600px at 90% 10%, rgba(20,241,217,.10), rgba(0,0,0,0)),
-    radial-gradient(900px 700px at 70% 90%, rgba(255,61,242,.10), rgba(0,0,0,0));
+  min-height: 100vh;
 }
 
-/* =========================
-   Animated gradient header
-========================= */
-.header{
-  border-bottom: 1px solid rgba(255,255,255,.08);
+/* Animated gradient header (className="header") */
+.header {
   position: sticky;
   top: 0;
   z-index: 10;
-  background: rgba(7,10,16,.62);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-}
-.headerInner{
-  position: relative;
+
   padding: 18px 22px;
-  overflow: hidden;
-}
-.headerGlow{
-  position: absolute;
-  inset: -100px -200px;
-  background: linear-gradient(120deg, rgba(109,92,255,.25), rgba(20,241,217,.18), rgba(255,61,242,.18));
-  filter: blur(28px);
-  opacity: .85;
-  animation: floatGlow 10s ease-in-out infinite;
-  pointer-events: none;
-}
-@keyframes floatGlow{
-  0% { transform: translate3d(-2%, -2%, 0) scale(1); }
-  50% { transform: translate3d(2%, 3%, 0) scale(1.06); }
-  100% { transform: translate3d(-2%, -2%, 0) scale(1); }
+  font-size: var(--fs-3);
+  font-weight: 950;
+  letter-spacing: 0.2px;
+
+  border-bottom: 1px solid var(--border-soft);
+
+  background: linear-gradient(120deg, rgba(124, 92, 255, 0.22), rgba(35, 213, 255, 0.14), rgba(21, 255, 168, 0.10));
+  background-size: 200% 200%;
+  animation: headerFlow 8s ease-in-out infinite;
+
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
 }
 
-.headerTitle{
-  position: relative;
-  font-size: 26px;
-  font-weight: 900;
-  letter-spacing: .2px;
-}
-.headerSub{
-  position: relative;
-  margin-top: 4px;
-  color: var(--muted);
-  font-weight: 650;
-  font-size: 13px;
+@keyframes headerFlow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 55%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
-/* =========================
-   Content
-========================= */
-.content{
+/* Content wrapper (className="content") */
+.content {
   flex: 1;
-  padding: 22px;
+  padding: 24px;
   overflow: auto;
 }
-.page{
+
+/* IMPORTANT
+   You changed this already. Keep max-width none so it fills.
+   If you want a max width later, reintroduce it safely.
+*/
+.content > div {
   width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
+  max-width: none;
+  margin: 0;
 }
 
-/* Dark SaaS typography scale */
-.pageTitle{
-  margin: 0 0 10px;
-  font-size: 28px;
+/* ---------- Page typography ---------- */
+h2 {
+  margin: 0 0 14px;
+  font-size: var(--fs-4);
   font-weight: 950;
-  letter-spacing: .2px;
+  letter-spacing: 0.2px;
 }
-.muted{ color: var(--muted); font-weight: 650; }
 
-/* =========================
-   Controls
-========================= */
-select, button, textarea { font: inherit; }
+h3 {
+  margin: 0;
+  font-size: var(--fs-2);
+  font-weight: 950;
+  letter-spacing: 0.2px;
+}
 
-select{
-  background: rgba(255,255,255,.06);
-  color: var(--text);
-  border: 1px solid rgba(255,255,255,.12);
+/* ---------- Toolbar row ---------- */
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin: 14px 0 12px;
+  flex-wrap: wrap;
+}
+
+.toolbarLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.toolbarLabel {
+  font-weight: 900;
+  color: var(--text-1);
+  letter-spacing: 0.2px;
+}
+
+.toolbarRight {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* ---------- Inputs + Buttons ---------- */
+select,
+button,
+textarea {
+  font: inherit;
+}
+
+select {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-0);
+  border: 1px solid rgba(255, 255, 255, 0.10);
   border-radius: 14px;
   padding: 10px 12px;
   outline: none;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
-}
-select:focus{
-  border-color: rgba(109,92,255,.40);
-  box-shadow:
-    0 0 0 3px rgba(109,92,255,.18),
-    inset 0 1px 0 rgba(255,255,255,.06);
+  transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
 }
 
-textarea{
+select:focus {
+  border-color: rgba(35, 213, 255, 0.35);
+  box-shadow: 0 0 0 4px rgba(35, 213, 255, 0.12);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+button {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 16px;
+  padding: 10px 14px;
+  font-weight: 950;
+  cursor: pointer;
+
+  color: var(--text-0);
+  background: linear-gradient(90deg, rgba(124, 92, 255, 0.34), rgba(35, 213, 255, 0.18));
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.30);
+
+  transition: transform 120ms ease, box-shadow 160ms ease, border-color 160ms ease, filter 160ms ease;
+}
+
+button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(124, 92, 255, 0.30);
+  box-shadow: 0 0 0 1px rgba(124, 92, 255, 0.20), 0 0 26px rgba(124, 92, 255, 0.22),
+    0 0 38px rgba(35, 213, 255, 0.14);
+}
+
+button:active {
+  transform: translateY(0px);
+  filter: brightness(0.95);
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Textareas */
+textarea {
   width: 100%;
-  background: rgba(0,0,0,.28);
-  color: var(--text);
-  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(0, 0, 0, 0.34);
+  color: var(--text-0);
+
+  border: 1px solid rgba(255, 255, 255, 0.10);
   border-radius: 18px;
+
   padding: 14px;
   resize: vertical;
+
   outline: none;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
-}
-textarea:focus{
-  border-color: rgba(20,241,217,.30);
-  box-shadow:
-    0 0 0 3px rgba(20,241,217,.12),
-    inset 0 1px 0 rgba(255,255,255,.06);
+  transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
 }
 
-/* Buttons */
-.btnPrimary{
-  background: linear-gradient(135deg, rgba(109,92,255,.92), rgba(20,241,217,.42));
-  border: 1px solid rgba(255,255,255,.18);
-  color: #081018;
-  font-weight: 950;
-  border-radius: 16px;
-  padding: 12px 16px;
-  cursor: pointer;
-  box-shadow: var(--shadow2);
-  transition: transform .12s ease, box-shadow .12s ease, filter .12s ease;
-}
-.btnPrimary:hover{
-  transform: translateY(-1px);
-  box-shadow:
-    0 0 0 1px rgba(109,92,255,.25),
-    0 0 28px rgba(109,92,255,.22),
-    0 0 24px rgba(20,241,217,.14),
-    var(--shadow2);
-  filter: brightness(1.05);
-}
-.btnGhost{
-  background: rgba(255,255,255,.06);
-  border: 1px solid rgba(255,255,255,.14);
-  color: var(--text);
-  font-weight: 900;
-  border-radius: 16px;
-  padding: 12px 16px;
-  cursor: pointer;
-  box-shadow: var(--shadow2);
-  transition: transform .12s ease, box-shadow .12s ease;
-}
-.btnGhost:hover{
-  transform: translateY(-1px);
-  box-shadow:
-    0 0 0 1px rgba(255,61,242,.20),
-    0 0 26px rgba(255,61,242,.14),
-    var(--shadow2);
+textarea:focus {
+  border-color: rgba(21, 255, 168, 0.28);
+  box-shadow: 0 0 0 4px rgba(21, 255, 168, 0.10);
+  background: rgba(0, 0, 0, 0.38);
 }
 
-.btnSmall{
-  background: rgba(255,255,255,.07);
-  border: 1px solid rgba(255,255,255,.14);
-  color: var(--text);
-  font-weight: 900;
-  border-radius: 14px;
-  padding: 10px 14px;
-  cursor: pointer;
-  transition: transform .12s ease, box-shadow .12s ease;
-}
-.btnSmall:hover{
-  transform: translateY(-1px);
-  box-shadow:
-    0 0 0 1px rgba(20,241,217,.18),
-    0 0 24px rgba(20,241,217,.12);
-}
-.btnSmall.danger:hover{
-  box-shadow:
-    0 0 0 1px rgba(255,107,107,.26),
-    0 0 24px rgba(255,107,107,.14);
-}
-
-button:disabled{
-  opacity: .55;
-  cursor: not-allowed;
-}
-
-/* Toolbar */
-.toolbar{
-  display:flex;
-  align-items:center;
-  justify-content: space-between;
-  gap: 14px;
-  margin: 10px 0 12px;
-}
-.toolbarLeft{
-  display:flex;
-  align-items:center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-.toolbarRight{
-  display:flex;
-  align-items:center;
-  gap: 10px;
-}
-.toolbarLabel{
-  font-weight: 950;
-  font-size: 18px;
-}
-
-/* Status pill */
-.statusPill{
-  display:inline-flex;
-  align-items:center;
-  padding: 8px 12px;
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,.14);
-  background: rgba(255,255,255,.06);
-  color: rgba(234,240,255,.86);
-  font-weight: 850;
-  font-size: 12px;
-}
-
-/* Blog input */
-.blogInput{
-  margin-bottom: 18px;
+.blogInput {
+  margin: 12px 0 18px;
   min-height: 220px;
 }
 
-/* =========================
-   Platform grid + glass cards
-========================= */
-.platformGrid{
-  display:grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px;
-  align-items: start;
-}
-
-/* Make LinkedIn full width on wide screens if you want
-   Comment out if you prefer 2x2 style.
-*/
-.platformGrid .platformBlock:last-child{
-  grid-column: 1 / -1;
-}
-
-.platformBlock{
-  background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.04));
-  border: 1px solid rgba(255,255,255,.12);
-  border-radius: 22px;
+/* ---------- Soft glassmorphism card base ---------- */
+.platformBlock {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-3);
   padding: 16px;
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-soft);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-  position: relative;
-  overflow: visible;
-}
-.platformBlock::after{
-  content:"";
-  position:absolute;
-  inset: -1px;
-  border-radius: 22px;
-  pointer-events:none;
-  opacity: 0;
-  transition: opacity .14s ease;
-  box-shadow:
-    0 0 0 1px rgba(109,92,255,.20),
-    0 0 30px rgba(109,92,255,.14),
-    0 0 26px rgba(20,241,217,.10);
-}
-.platformBlock:hover::after{ opacity: 1; }
-
-.platformHeader{
-  display:flex;
-  align-items:center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 10px;
-}
-.platformHeader h3{
-  margin: 0;
-  font-size: 20px;
-  font-weight: 950;
 }
 
-.platformActions{
-  display:flex;
-  align-items:center;
-  gap: 10px;
-}
-.count{
-  font-weight: 950;
-  color: rgba(234,240,255,.78);
-}
-.count.over{
-  color: #ff6b6b;
+/* Make blocks glow on hover */
+.platformBlock:hover {
+  border-color: rgba(35, 213, 255, 0.18);
+  box-shadow: 0 0 0 1px rgba(35, 213, 255, 0.14), 0 0 28px rgba(35, 213, 255, 0.14), var(--shadow);
 }
 
-/* Prevent any clipping */
-.platformText{
-  min-height: 110px;
-}
-
-/* =========================
-   Preview cards (show FULL post)
-========================= */
-.previewCard{
-  margin-top: 12px;
-  border-radius: 18px;
-  border: 1px solid rgba(255,255,255,.12);
-  background: rgba(0,0,0,.22);
-  padding: 14px;
-  overflow: visible;
-}
-.previewTop{
-  display:flex;
-  gap: 10px;
-  align-items:center;
-  margin-bottom: 10px;
-}
-.avatar{
-  width: 36px;
-  height: 36px;
-  border-radius: 999px;
-  display:grid;
-  place-items:center;
-  font-weight: 950;
-  background: rgba(255,255,255,.08);
-  border: 1px solid rgba(255,255,255,.12);
-}
-.metaBlock{ min-width: 0; }
-
-.nameRow{
-  display:flex;
-  align-items: baseline;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-.displayName{ font-weight: 950; }
-.handle{
-  opacity: .72;
-  font-weight: 800;
-}
-.metaRow{
-  opacity: .72;
-  font-size: 12px;
-  font-weight: 800;
-}
-.metaDot{
-  opacity: .6;
-  font-weight: 950;
-}
-
-/* Show whole content, no clamp, no max-height */
-.previewBody{
-  white-space: pre-wrap;
-  line-height: 1.35;
-  font-weight: 700;
-  overflow: visible;
-  max-height: none;
-}
-
-.previewFooter{
-  margin-top: 12px;
-  display:flex;
-  gap: 16px;
-  opacity: .78;
-  font-weight: 900;
-  font-size: 13px;
-}
-
-/* =========================
-   Drafts page
-========================= */
-.draftsTop{
-  display:flex;
-  align-items:center;
+/* Header row inside block */
+.platformHeader {
+  display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 12px;
 }
-.draftList{
-  display:grid;
-  gap: 12px;
-}
-.draftCard{
-  display:flex;
-  align-items:center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 14px;
-  border-radius: 18px;
-  border: 1px solid rgba(255,255,255,.12);
-  background: rgba(255,255,255,.05);
-  box-shadow: var(--shadow2);
-}
-.draftTitle{
-  font-weight: 950;
-  font-size: 16px;
-}
-.draftSub{
-  margin-top: 4px;
-  color: var(--muted);
-  font-weight: 750;
-  font-size: 12px;
-}
-.draftActions{
-  display:flex;
+
+.platformActions {
+  display: flex;
+  align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
-.emptyState{
-  padding: 18px;
-  border-radius: 18px;
-  border: 1px dashed rgba(255,255,255,.18);
-  background: rgba(255,255,255,.04);
-}
-.emptyTitle{
+/* Count pill */
+.count {
   font-weight: 950;
-  font-size: 18px;
-}
-.emptySub{
-  color: var(--muted);
-  font-weight: 750;
-  margin-top: 6px;
+  font-size: var(--fs-0);
+  color: var(--text-1);
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.05);
 }
 
-/* =========================
-   Responsive behavior
-========================= */
-@media (max-width: 980px){
-  .platformGrid{
+.count.over {
+  border-color: rgba(255, 80, 120, 0.35);
+  color: rgba(255, 170, 190, 1);
+  box-shadow: 0 0 0 1px rgba(255, 80, 120, 0.15), 0 0 18px rgba(255, 80, 120, 0.18);
+}
+
+/* ---------- Grid for platform blocks (you asked for this) ---------- */
+/* Add className="platformGrid" around your 3 PlatformBlock components */
+.platformGrid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.platformGrid .platformBlock {
+  grid-column: span 6;
+}
+
+/* LinkedIn full width on desktop */
+.platformGrid .platformBlock:last-child {
+  grid-column: 1 / -1;
+}
+
+/* ---------- Preview cards ---------- */
+.previewCard {
+  margin-top: 12px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: rgba(0, 0, 0, 0.22);
+  padding: 14px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.40);
+}
+
+.previewTop {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-weight: 950;
+
+  background: radial-gradient(circle at 30% 30%, rgba(124, 92, 255, 0.35), rgba(35, 213, 255, 0.12));
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 0 0 1px rgba(124, 92, 255, 0.12), 0 0 18px rgba(124, 92, 255, 0.12);
+}
+
+.nameRow {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.displayName {
+  font-weight: 950;
+  letter-spacing: 0.2px;
+}
+
+.handle {
+  opacity: 0.75;
+  font-weight: 800;
+}
+
+.metaRow {
+  opacity: 0.7;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.metaDot {
+  opacity: 0.6;
+  font-weight: 950;
+}
+
+.previewBody {
+  white-space: pre-wrap;
+  line-height: 1.45;
+  font-weight: 650;
+  color: var(--text-0);
+
+  /* show the whole post (no clamp, no hidden overflow) */
+  overflow: visible;
+  word-break: break-word;
+}
+
+.previewFooter {
+  margin-top: 12px;
+  display: flex;
+  gap: 16px;
+  opacity: 0.78;
+  font-weight: 900;
+  font-size: 13px;
+}
+
+/* ---------- Mobile + Tablet ---------- */
+@media (max-width: 980px) {
+  .app {
     grid-template-columns: 1fr;
   }
-  .platformGrid .platformBlock:last-child{
-    grid-column: auto;
+
+  /* Sidebar becomes off-canvas by default.
+     This expects your App.jsx to toggle a class like "sidebarOpen"
+     and to render an overlay with class "sidebarOverlay".
+  */
+  .sidebar {
+    position: fixed;
+    z-index: 50;
+    left: 0;
+    top: 0;
+    width: min(320px, 86vw);
+    transform: translateX(-110%);
+    transition: transform 180ms ease;
+    box-shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
+  }
+
+  .sidebar.sidebarOpen {
+    transform: translateX(0%);
+  }
+
+  .sidebarOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+
+  .content {
+    padding: 18px;
+  }
+
+  h2 {
+    font-size: 26px;
+  }
+
+  .platformGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .platformGrid .platformBlock {
+    grid-column: 1 / -1;
   }
 }
 
-@media (max-width: 860px){
-  .content{ padding: 16px; }
-  .sidebar{
-    position: fixed;
-    left: -320px;
-    top: 0;
-    bottom: 0;
-    width: 300px;
-    z-index: 45;
-    transition: left .18s ease;
-    box-shadow: var(--shadow);
+@media (max-width: 520px) {
+  .header {
+    padding: 14px 16px;
+    font-size: 18px;
   }
-  .sidebar.open{ left: 0; }
-  .hamburger{ display: inline-block; }
-  .sidebarClose{ display:inline-grid; place-items:center; }
-  .pageTitle{ font-size: 24px; }
-  .headerTitle{ font-size: 22px; }
+
+  .content {
+    padding: 14px;
+  }
+
+  button {
+    width: 100%;
+  }
+
+  select {
+    width: 100%;
+  }
+
+  .toolbar {
+    align-items: stretch;
+  }
+
+  .toolbarLeft,
+  .toolbarRight {
+    width: 100%;
+  }
+
+  .toolbarRight {
+    justify-content: stretch;
+  }
+
+  .platformActions {
+    width: 100%;
+    justify-content: space-between;
+  }
 }
