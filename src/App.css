@@ -1,634 +1,518 @@
-/* =========================================================
-   SparkSocial App.css
-   Dark SaaS + glassmorphism + neon glow + animated header
-   Layout:
-     - Desktop: sidebar + content
-     - Desktop cards: Twitter/Facebook row, LinkedIn full width under
-     - Mobile: stacked + hamburger visible
-   ========================================================= */
+/* App.css
+   SparkSocial UI theme + layout
+   Goals:
+   - Dark SaaS typography scale
+   - Soft glassmorphism cards
+   - Animated gradient header (but NOT a weird “pill”)
+   - Neon hover glow
+   - Desktop: NO hamburger or X visible
+   - Social layout: Twitter + Facebook on top row, LinkedIn full width underneath
+   - Twitter/Facebook preview cards match height (stretch)
+*/
 
-/* ---------- CSS Reset-ish / Globals ---------- */
-:root {
-  --bg0: #05070d;
+:root{
+  --bg0: #05070c;
   --bg1: #070b14;
-  --panel: rgba(255, 255, 255, 0.06);
-  --panel2: rgba(255, 255, 255, 0.08);
-  --stroke: rgba(255, 255, 255, 0.12);
-  --stroke2: rgba(255, 255, 255, 0.18);
-  --text: rgba(244, 247, 255, 0.92);
-  --muted: rgba(244, 247, 255, 0.68);
+  --ink: rgba(236, 242, 255, .92);
+  --muted: rgba(236, 242, 255, .68);
 
-  --brandA: #7c3aed; /* purple */
-  --brandB: #22d3ee; /* cyan */
-  --brandC: #60a5fa; /* blue */
-  --brandD: #10b981; /* green */
+  --glass: rgba(255,255,255,.06);
+  --glass2: rgba(255,255,255,.085);
+  --border: rgba(255,255,255,.10);
+  --border2: rgba(255,255,255,.14);
 
-  --shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
-  --shadow2: 0 14px 40px rgba(0, 0, 0, 0.35);
+  --shadow: 0 18px 60px rgba(0,0,0,.55);
+  --shadow2: 0 10px 35px rgba(0,0,0,.45);
 
-  --r-lg: 22px;
-  --r-md: 16px;
-  --r-sm: 12px;
+  --r-lg: 18px;
+  --r-md: 14px;
 
-  --pad: 18px;
-  --pad-lg: 22px;
+  --accentA: #6d7bff;
+  --accentB: #46e6ff;
+  --accentC: #a855f7;
 
-  --max: 1200px;
-  --sidebarW: 280px;
+  --glowA: rgba(109,123,255,.38);
+  --glowB: rgba(70,230,255,.24);
+  --glowC: rgba(168,85,247,.22);
 
-  --glow: 0 0 0 1px rgba(124, 58, 237, 0.35), 0 0 22px rgba(34, 211, 238, 0.18);
-  --glow2: 0 0 0 1px rgba(34, 211, 238, 0.35), 0 0 26px rgba(124, 58, 237, 0.22);
+  --h1: clamp(28px, 3.2vw, 40px);
+  --h2: clamp(20px, 2.1vw, 28px);
+  --h3: 18px;
+  --body: 16px;
+  --small: 13px;
 
-  --font: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --line: 1.55;
 }
 
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
-
-html,
-body {
+*{ box-sizing: border-box; }
+html, body{
   height: 100%;
-}
-
-body {
   margin: 0;
-  font-family: var(--font);
-  color: var(--text);
-  background:
-    radial-gradient(1200px 700px at 10% 10%, rgba(124, 58, 237, 0.20), transparent 60%),
-    radial-gradient(900px 600px at 90% 20%, rgba(34, 211, 238, 0.15), transparent 55%),
-    radial-gradient(900px 700px at 60% 90%, rgba(16, 185, 129, 0.10), transparent 60%),
-    linear-gradient(180deg, var(--bg0), var(--bg1));
-  overflow-x: hidden;
+  color: var(--ink);
+  background: radial-gradient(1200px 900px at 15% 10%, rgba(168,85,247,.20), transparent 55%),
+              radial-gradient(900px 700px at 80% 25%, rgba(70,230,255,.16), transparent 55%),
+              radial-gradient(1000px 800px at 60% 80%, rgba(109,123,255,.14), transparent 60%),
+              linear-gradient(180deg, var(--bg0), var(--bg1));
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+#root{ height: 100%; }
+
+/* ---------------------------
+   App shell
+----------------------------*/
+.app{
+  min-height: 100%;
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 18px;
+  padding: 18px;
 }
 
-/* Ensure root fills screen */
-#root {
-  min-height: 100vh;
+/* Sidebar */
+.sidebar{
+  position: sticky;
+  top: 18px;
+  align-self: start;
+  height: calc(100vh - 36px);
+  overflow: hidden;
+
+  border-radius: var(--r-lg);
+  background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.04));
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow2);
+  backdrop-filter: blur(16px);
 }
 
-/* Prevent accidental global constraints from earlier experiments */
-.content > div {
+.sidebarInner{
+  height: 100%;
+  overflow: auto;
+  padding: 18px;
+}
+
+.brand{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.brand h1{
+  margin: 0;
+  font-size: 26px;
+  letter-spacing: .2px;
+}
+.brand .tag{
+  font-size: var(--small);
+  color: var(--muted);
+}
+
+.nav{
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+.nav a, .nav button{
+  appearance: none;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ink);
+  text-decoration: none;
+  text-align: left;
+  padding: 12px 12px;
+  border-radius: 14px;
+  font-weight: 650;
+  letter-spacing: .2px;
+  cursor: pointer;
+  transition: transform .15s ease, background .15s ease, border-color .15s ease, box-shadow .15s ease;
+}
+.nav a:hover, .nav button:hover{
+  background: rgba(255,255,255,.06);
+  border-color: rgba(255,255,255,.10);
+  box-shadow: 0 0 0 2px rgba(109,123,255,.10), 0 12px 26px rgba(0,0,0,.30);
+  transform: translateY(-1px);
+}
+.nav .active{
+  background: linear-gradient(90deg, rgba(109,123,255,.18), rgba(70,230,255,.10));
+  border-color: rgba(109,123,255,.22);
+  box-shadow: 0 0 0 2px rgba(109,123,255,.10), 0 14px 34px rgba(0,0,0,.38);
+}
+
+/* Content */
+.content{
+  min-width: 0;
+  display: grid;
+  gap: 16px;
+  align-content: start;
+}
+.content > div{
   width: 100%;
   max-width: none;
   margin: 0;
 }
 
-/* ---------- Typography Scale (dark SaaS) ---------- */
-h1,
-h2,
-h3 {
-  margin: 0;
-  letter-spacing: -0.02em;
-}
-
-.h1 {
-  font-size: clamp(26px, 2.6vw, 40px);
-  line-height: 1.08;
-  font-weight: 800;
-}
-
-.h2 {
-  font-size: clamp(18px, 1.6vw, 26px);
-  line-height: 1.15;
-  font-weight: 800;
-}
-
-.label {
-  font-size: 13px;
-  font-weight: 650;
-  color: var(--muted);
-  letter-spacing: 0.02em;
-}
-
-.small {
-  font-size: 12px;
-  color: var(--muted);
-}
-
-a {
-  color: inherit;
-}
-
-/* ---------- Utility Glass Panel ---------- */
-.glass {
-  background: var(--panel);
-  border: 1px solid var(--stroke);
-  box-shadow: var(--shadow2);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+/* ---------------------------
+   Header (animated gradient, not a pill)
+----------------------------*/
+.header{
+  position: relative;
   border-radius: var(--r-lg);
-}
-
-/* ---------- App Layout ---------- */
-.appShell {
-  min-height: 100vh;
-  display: grid;
-  grid-template-columns: var(--sidebarW) 1fr;
-  gap: 0;
-}
-
-/* Sidebar */
-.sidebar {
-  position: sticky;
-  top: 0;
-  height: 100vh;
-  padding: 18px;
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
-  background:
-    radial-gradient(800px 500px at 20% 10%, rgba(124, 58, 237, 0.20), transparent 55%),
-    radial-gradient(700px 450px at 70% 35%, rgba(34, 211, 238, 0.12), transparent 55%),
-    rgba(0, 0, 0, 0.22);
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,.05);
+  box-shadow: var(--shadow2);
+  overflow: hidden;
   backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+}
+.header::before{
+  content: "";
+  position: absolute;
+  inset: -2px;
+  background: linear-gradient(120deg,
+    rgba(109,123,255,.35),
+    rgba(70,230,255,.22),
+    rgba(168,85,247,.26),
+    rgba(109,123,255,.35)
+  );
+  filter: blur(10px);
+  opacity: .75;
+  transform: translate3d(0,0,0);
+  animation: headerFlow 10s ease-in-out infinite;
+}
+.header::after{
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(900px 220px at 20% 20%, rgba(255,255,255,.10), transparent 60%),
+              radial-gradient(700px 220px at 80% 60%, rgba(255,255,255,.07), transparent 62%);
+  pointer-events: none;
 }
 
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-weight: 850;
-  font-size: 28px;
-  letter-spacing: -0.02em;
-  margin: 6px 0 18px;
+@keyframes headerFlow{
+  0%{ transform: translateX(-6%) translateY(-2%); }
+  50%{ transform: translateX(6%) translateY(2%); }
+  100%{ transform: translateX(-6%) translateY(-2%); }
 }
 
-.nav {
-  display: grid;
-  gap: 10px;
-  margin-top: 10px;
-}
-
-.nav a,
-.nav button {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 10px;
-  padding: 14px 14px;
-  border-radius: 14px;
-  border: 1px solid transparent;
-  background: transparent;
-  color: rgba(244, 247, 255, 0.82);
-  text-decoration: none;
-  font-weight: 700;
-  cursor: pointer;
-  transition: 160ms ease;
-}
-
-.nav a:hover,
-.nav button:hover {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.10);
-  box-shadow: var(--glow);
-}
-
-.nav .active {
-  background: linear-gradient(90deg, rgba(124, 58, 237, 0.22), rgba(34, 211, 238, 0.14));
-  border-color: rgba(124, 58, 237, 0.35);
-  box-shadow: var(--glow2);
-}
-
-/* Main content area */
-.main {
-  padding: 18px;
-  display: grid;
-  justify-items: center;
-}
-
-.mainInner {
-  width: 100%;
-  max-width: var(--max);
-}
-
-/* ---------- Header (animated gradient, no weird rounded bar) ---------- */
-.header {
-  position: sticky;
-  top: 0;
-  z-index: 30;
-  padding: 16px 16px;
-  margin-bottom: 16px;
-
-  border-radius: 18px; /* normal card radius */
-  border: 1px solid rgba(255, 255, 255, 0.10);
-
-  background:
-    linear-gradient(120deg,
-      rgba(124, 58, 237, 0.28),
-      rgba(34, 211, 238, 0.18),
-      rgba(96, 165, 250, 0.22),
-      rgba(16, 185, 129, 0.12)
-    );
-  background-size: 220% 220%;
-  animation: headerShift 10s ease infinite;
-
-  box-shadow: 0 16px 42px rgba(0, 0, 0, 0.35);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-}
-
-@keyframes headerShift {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-
-.headerRow {
+.headerInner{
+  position: relative;
+  z-index: 1;
+  padding: 18px 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 14px;
 }
 
-.headerTitle {
-  font-size: 28px;
-  font-weight: 900;
-  letter-spacing: -0.02em;
+/* Make the title a normal aligned header line */
+.headerTitle{
+  margin: 0;
+  font-size: var(--h1);
+  line-height: 1.15;
+  letter-spacing: .2px;
+  text-shadow: 0 12px 40px rgba(0,0,0,.45);
 }
 
-/* ---------- Mobile menu buttons (hamburger + close) ---------- */
-/* By default: hidden on desktop */
-.menuBtn,
-.closeBtn {
-  display: none;
+/* ---------------------------
+   Buttons, inputs, pills
+----------------------------*/
+.btn{
+  appearance: none;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.06);
+  color: var(--ink);
+  padding: 10px 14px;
+  border-radius: 14px;
+  font-weight: 750;
+  cursor: pointer;
+  transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease, background .15s ease;
+}
+.btn:hover{
+  transform: translateY(-1px);
+  border-color: rgba(109,123,255,.26);
+  box-shadow: 0 0 0 2px rgba(109,123,255,.12), 0 18px 38px rgba(0,0,0,.45);
+}
+.btnPrimary{
+  background: linear-gradient(135deg, rgba(109,123,255,.32), rgba(168,85,247,.22));
+  border-color: rgba(109,123,255,.26);
+}
+.btnPrimary:hover{
+  box-shadow: 0 0 0 2px rgba(109,123,255,.16), 0 0 24px rgba(109,123,255,.18), 0 18px 40px rgba(0,0,0,.48);
+}
+.btnGlow:hover{
+  box-shadow: 0 0 0 2px rgba(70,230,255,.14), 0 0 24px rgba(70,230,255,.18), 0 16px 36px rgba(0,0,0,.46);
 }
 
-/* ---------- Generator Section ---------- */
-.sectionCard {
-  padding: var(--pad-lg);
+/* “Ready / Saved / Failed” pill */
+.pill{
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 999px;
+  font-size: var(--small);
+  font-weight: 750;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.06);
+  color: var(--muted);
+}
+.pillReady{ border-color: rgba(70,230,255,.18); color: rgba(190,255,255,.88); }
+.pillSaved{ border-color: rgba(109,123,255,.24); color: rgba(210,220,255,.92); }
+.pillFailed{ border-color: rgba(255,120,180,.22); color: rgba(255,200,225,.92); }
+
+/* Inputs / selects */
+select, textarea, input{
+  color: var(--ink);
+  background: rgba(0,0,0,.22);
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 14px;
+  padding: 10px 12px;
+  outline: none;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+select:focus, textarea:focus, input:focus{
+  border-color: rgba(109,123,255,.28);
+  box-shadow: 0 0 0 2px rgba(109,123,255,.12);
+}
+textarea{
+  width: 100%;
+  min-height: 180px;
+  resize: vertical;
+  line-height: var(--line);
+  font-size: var(--body);
+}
+
+/* ---------------------------
+   Cards (glassmorphism)
+----------------------------*/
+.card{
   border-radius: var(--r-lg);
-  border: 1px solid var(--stroke);
-  background: rgba(255, 255, 255, 0.06);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.04));
+  box-shadow: var(--shadow2);
+  backdrop-filter: blur(16px);
+  overflow: hidden;
+}
+.cardInner{
+  padding: 16px;
+}
+.cardTitle{
+  margin: 0 0 10px 0;
+  font-size: var(--h2);
+  line-height: 1.18;
 }
 
-.sectionTop {
+/* Neon hover glow for interactive cards */
+.cardHover{
+  transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease;
+}
+.cardHover:hover{
+  transform: translateY(-2px);
+  border-color: rgba(109,123,255,.22);
+  box-shadow:
+    0 0 0 2px rgba(109,123,255,.12),
+    0 0 24px rgba(109,123,255,.12),
+    0 24px 60px rgba(0,0,0,.52);
+}
+
+/* ---------------------------
+   Generator section
+----------------------------*/
+.generatorTopRow{
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 14px;
   flex-wrap: wrap;
-  margin-bottom: 14px;
 }
-
-.sectionTitle {
-  font-size: 32px;
-  font-weight: 900;
-  letter-spacing: -0.02em;
-  margin: 0;
-}
-
-.controls {
+.generatorControls{
   display: flex;
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
 }
-
-select,
-input,
-textarea {
-  font-family: var(--font);
-  color: var(--text);
-}
-
-select {
-  appearance: none;
-  -webkit-appearance: none;
-  padding: 10px 38px 10px 14px;
-  border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(0, 0, 0, 0.28);
-  outline: none;
-  font-weight: 700;
-}
-
-select:focus {
-  box-shadow: var(--glow);
-  border-color: rgba(34, 211, 238, 0.35);
-}
-
-.pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(0, 0, 0, 0.20);
-  font-weight: 800;
-  font-size: 12px;
-  color: rgba(244, 247, 255, 0.78);
-}
-
-.pill.ok {
-  border-color: rgba(16, 185, 129, 0.30);
-  box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.18);
-}
-
-.pill.err {
-  border-color: rgba(239, 68, 68, 0.32);
-  box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.18);
-}
-
-/* Buttons */
-.btn {
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--text);
-  padding: 10px 14px;
-  border-radius: 16px;
-  font-weight: 850;
-  cursor: pointer;
-  transition: 180ms ease;
-  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.25);
-}
-
-.btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.35), var(--glow);
-  border-color: rgba(34, 211, 238, 0.30);
-}
-
-.btnPrimary {
-  background: linear-gradient(90deg, rgba(124, 58, 237, 0.85), rgba(34, 211, 238, 0.55));
-  border-color: rgba(124, 58, 237, 0.35);
-}
-
-.btnPrimary:hover {
-  box-shadow: 0 14px 38px rgba(0, 0, 0, 0.40), var(--glow2);
-}
-
-/* Blog input */
-.blogBox {
-  width: 100%;
-  min-height: 200px;
-  max-height: 360px;
-  resize: vertical;
-
-  border-radius: var(--r-lg);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(0, 0, 0, 0.30);
-  padding: 16px;
-
-  outline: none;
-  line-height: 1.5;
-  font-size: 15px;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
-}
-
-.blogBox:focus {
-  border-color: rgba(34, 211, 238, 0.28);
-  box-shadow: inset 0 0 0 1px rgba(34, 211, 238, 0.18), var(--glow);
-}
-
-/* ---------- Social Grid Layout (Twitter + Facebook top, LinkedIn full width) ---------- */
-.platformGrid {
-  display: grid;
-  gap: 18px;
-  margin-top: 18px;
-
-  /* Desktop default: 2 columns */
-  grid-template-columns: 1fr 1fr;
-  align-items: stretch; /* makes the two top cards equal height */
-}
-
-/* Force LinkedIn to span the full row beneath */
-.platformGrid .platformCard.linkedin {
-  grid-column: 1 / -1;
-}
-
-/* ---------- Platform Cards (glassmorphism + neon hover) ---------- */
-.platformCard {
-  position: relative;
-  padding: 18px;
-  border-radius: var(--r-lg);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.06);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  box-shadow: var(--shadow2);
-  transition: 200ms ease;
-  display: grid;
-  grid-template-rows: auto auto 1fr auto; /* header, textarea, preview, footer */
-  min-height: 360px; /* helps align visually with stretch */
-}
-
-.platformCard:hover {
-  transform: translateY(-2px);
-  border-color: rgba(34, 211, 238, 0.22);
-  box-shadow: 0 18px 52px rgba(0, 0, 0, 0.48), var(--glow);
-}
-
-.platformHeader {
+.actions{
   display: flex;
-  align-items: center;
-  justify-content: space-between;
   gap: 10px;
-  margin-bottom: 12px;
+  flex-wrap: wrap;
 }
 
-.platformName {
-  font-size: 22px;
-  font-weight: 900;
-  letter-spacing: -0.02em;
+/* ---------------------------
+   Social platform layout
+   - 2 columns on desktop: Twitter + Facebook
+   - LinkedIn always full width on row 2
+   - Cards stretch to same height in row 1
+----------------------------*/
+
+/* If your JSX uses .platformGrid already, this will take over */
+.platformGrid{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-areas:
+    "x fb"
+    "li li";
+  gap: 18px;
+  align-items: stretch;  /* important: make row items same height */
 }
 
-.counter {
-  font-weight: 900;
-  color: rgba(244, 247, 255, 0.72);
-}
+/* These area hooks are optional.
+   Add these classes on the wrappers if you have them:
+   <section className="platformCard platformX"> ... */
+.platformX{ grid-area: x; }
+.platformFB{ grid-area: fb; }
+.platformLI{ grid-area: li; }
 
-/* Post output textarea inside each platform */
-.platformText {
-  width: 100%;
-  min-height: 110px;
-  max-height: 160px;
-  resize: vertical;
-
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(0, 0, 0, 0.30);
-  padding: 12px;
-
-  outline: none;
-  line-height: 1.45;
-  font-size: 14px;
-  margin-bottom: 12px;
-}
-
-.platformText:focus {
-  border-color: rgba(124, 58, 237, 0.28);
-  box-shadow: var(--glow2);
-}
-
-/* Preview card area */
-.preview {
-  border-radius: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.10);
-  background: rgba(0, 0, 0, 0.26);
-  padding: 14px;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
-  overflow: hidden; /* prevents ugly overflow */
-  min-height: 140px; /* ensures cards align better */
-}
-
-/* Make preview show full post text instead of cutting off */
-.preview .previewBody {
-  white-space: pre-wrap;
-  word-break: break-word;
-  overflow: visible;
-}
-
-/* Simple avatar row styling for preview */
-.previewTop {
+/* The platform card itself */
+.platformCard{
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* Header row inside platform card (title + counter + copy button) */
+.platformHeader{
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
   gap: 10px;
   margin-bottom: 10px;
 }
+.platformHeader h3{
+  margin: 0;
+  font-size: 22px;
+  letter-spacing: .2px;
+}
+.counter{
+  font-size: var(--small);
+  color: var(--muted);
+  font-weight: 750;
+}
+.copyBtn{
+  margin-left: auto;
+}
 
-.avatar {
+/* Textareas in platform cards */
+.platformCard textarea{
+  flex: 1;               /* important: stretch textarea height within card */
+  min-height: 140px;
+}
+
+/* Preview blocks: stretch so Twitter and Facebook match height */
+.previewWrap{
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;               /* fills remaining height when present */
+}
+.previewCard{
+  border-radius: var(--r-md);
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(0,0,0,.18);
+  padding: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.35);
+  flex: 1;               /* stretch */
+  min-height: 140px;     /* keeps short previews from collapsing */
+}
+.previewMeta{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: var(--small);
+  margin-bottom: 8px;
+}
+.avatar{
   width: 34px;
   height: 34px;
   border-radius: 999px;
   display: grid;
   place-items: center;
+  background: rgba(255,255,255,.10);
+  border: 1px solid rgba(255,255,255,.12);
   font-weight: 900;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow: 0 0 0 2px rgba(109,123,255,.10);
+}
+.previewText{
+  margin: 0;
+  line-height: var(--line);
+  font-size: var(--body);
 }
 
-.previewMeta {
-  display: grid;
-  line-height: 1.1;
+/* LinkedIn: ensure it spans full width and looks intentional */
+.platformLI .previewCard{
+  min-height: 170px;
 }
 
-.previewName {
-  font-weight: 900;
+/* ---------------------------
+   Hide hamburger + X on desktop
+   (Your JSX likely has classes like .hamburger, .menuBtn, .closeBtn, .sidebarToggle)
+----------------------------*/
+.hamburger,
+.menuBtn,
+.sidebarToggle,
+.closeBtn,
+.mobileNavToggle{
+  display: none !important;
 }
 
-.previewSub {
-  font-size: 12px;
-  color: rgba(244, 247, 255, 0.65);
-  font-weight: 700;
-}
-
-/* Footer actions (Like/Comment etc) */
-.previewActions {
-  display: flex;
-  gap: 14px;
-  margin-top: 10px;
-  color: rgba(244, 247, 255, 0.70);
-  font-weight: 800;
-  font-size: 13px;
-}
-
-/* Copy button placement */
-.copyBtn {
-  padding: 9px 12px;
-  border-radius: 14px;
-  font-weight: 900;
-}
-
-/* ---------- Mobile Behavior ---------- */
-@media (max-width: 980px) {
-  .appShell {
+/* ---------------------------
+   Responsive: mobile sidebar becomes drawer; show hamburger/X only on small screens
+----------------------------*/
+@media (max-width: 980px){
+  .app{
     grid-template-columns: 1fr;
+    padding: 14px;
   }
 
-  .sidebar {
+  /* Sidebar becomes overlay drawer */
+  .sidebar{
     position: fixed;
-    inset: 0 auto 0 0;
-    width: min(86vw, 340px);
-    transform: translateX(-110%);
-    transition: transform 220ms ease;
+    top: 12px;
+    left: 12px;
+    height: calc(100vh - 24px);
+    width: min(86vw, 320px);
     z-index: 60;
-    border-right: 1px solid rgba(255, 255, 255, 0.10);
+    transform: translateX(-110%);
+    transition: transform .2s ease;
   }
-
-  /* When your App adds an "open" class, it slides in */
-  .sidebar.open {
+  .sidebar.isOpen{
     transform: translateX(0);
   }
 
-  /* Backdrop overlay, if you have one */
-  .overlay {
+  /* Backdrop if you have one */
+  .backdrop{
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.55);
+    background: rgba(0,0,0,.50);
     backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    z-index: 50;
+    z-index: 55;
   }
 
-  /* Show hamburger on mobile */
-  .menuBtn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 44px;
-    height: 44px;
-    border-radius: 14px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    background: rgba(0, 0, 0, 0.25);
-    color: var(--text);
-    cursor: pointer;
-    box-shadow: var(--shadow2);
-  }
-
-  .menuBtn:hover {
-    box-shadow: var(--glow);
-  }
-
-  /* Show close button inside sidebar on mobile */
-  .closeBtn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 44px;
-    height: 44px;
-    border-radius: 14px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    background: rgba(0, 0, 0, 0.25);
-    color: var(--text);
-    cursor: pointer;
-    box-shadow: var(--shadow2);
-  }
-
-  .platformGrid {
-    grid-template-columns: 1fr; /* stack all cards */
-  }
-
-  .platformGrid .platformCard.linkedin {
-    grid-column: auto;
-  }
-
-  .headerTitle {
-    font-size: 22px;
-  }
-
-  .sectionTitle {
-    font-size: 26px;
-  }
-}
-
-/* ---------- Desktop: ensure hamburger and X NEVER show ---------- */
-@media (min-width: 981px) {
+  /* Now allow hamburger and X on mobile */
+  .hamburger,
   .menuBtn,
-  .closeBtn {
-    display: none !important;
+  .sidebarToggle,
+  .closeBtn,
+  .mobileNavToggle{
+    display: inline-flex !important;
+  }
+
+  .platformGrid{
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "x"
+      "fb"
+      "li";
   }
 }
 
-/* ---------- Accessibility ---------- */
-:focus-visible {
-  outline: 2px solid rgba(34, 211, 238, 0.35);
-  outline-offset: 2px;
+/* ---------------------------
+   Utility helpers
+----------------------------*/
+.muted{ color: var(--muted); }
+.spacer{ height: 10px; }
+
+/* If something accidentally applies a max-width to the app container, kill it */
+.app, .content, .card, .header{
+  max-width: none;
 }
