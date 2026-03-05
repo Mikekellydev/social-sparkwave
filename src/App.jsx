@@ -1,217 +1,122 @@
 import React from "react";
-import { HashRouter, Routes, Route, NavLink, Navigate, useNavigate } from "react-router-dom";
+import { HashRouter, Routes, Route, NavLink, Navigate } from "react-router-dom";
 import "./App.css";
 import { openDB } from "idb";
 
-/**
- * IndexedDB schema
- * - kv: key value store for current in progress draft
- * - drafts: saved drafts library
- */
 const DB_NAME = "sparksocial";
-const DB_VERSION = 2;
+const STORE = "drafts";
+const KEY = "current";
 
-const STORE_KV = "kv";
-const STORE_DRAFTS = "drafts";
-const KV_CURRENT = "current";
-
-function nowISO() {
-  return new Date().toISOString();
-}
-
-function makeId() {
-  if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
-  return `draft_${Date.now()}_${Math.random().toString(16).slice(2)}`;
-}
+const LIMIT_X = 280;
+const LIMIT_FB = 1200;
+const LIMIT_LI = 2000;
 
 async function getDb() {
-  return openDB(DB_NAME, DB_VERSION, {
-    upgrade(db, oldVersion) {
-      // v1 had STORE_DRAFTS = "drafts" as a simple object store used for "current"
-      // We migrate to:
-      // - kv store for current
-      // - drafts store (keyPath: id) for the library
-      if (oldVersion < 2) {
-        // Ensure kv exists
-        if (!db.objectStoreNames.contains(STORE_KV)) {
-          db.createObjectStore(STORE_KV);
-        }
-
-        // If an old store named "drafts" exists, we will replace it
-        // because we now need it to store multiple records with keyPath "id"
-        if (db.objectStoreNames.contains(STORE_DRAFTS)) {
-          db.deleteObjectStore(STORE_DRAFTS);
-        }
-        db.createObjectStore(STORE_DRAFTS, { keyPath: "id" });
+  return openDB(DB_NAME, 1, {
+    upgrade(db) {
+      if (!db.objectStoreNames.contains(STORE)) {
+        db.createObjectStore(STORE);
       }
     },
   });
 }
 
-async function kvGet(key) {
-  const db = await getDb();
-  return db.get(STORE_KV, key);
+function clampText(text, max) {
+  const cleaned = (text || "").replace(/\s+/g, " ").trim();
+  if (!cleaned) return "";
+  if (cleaned.length <= max) return cleaned;
+  return cleaned.slice(0, max - 1) + "…";
 }
 
-async function kvSet(key, value) {
-  const db = await getDb();
-  await db.put(STORE_KV, value, key);
+function buildXText(baseText, hashtag = "#ITLeadership") {
+  const base = (baseText || "").replace(/\s+/g, " ").trim();
+  if (!base) return "";
+
+  const suffix = hashtag ? ` ${hashtag}` : "";
+  const allowed = LIMIT_X - suffix.length;
+
+  const clippedBase = clampText(base, Math.max(0, allowed));
+  const combined = `${clippedBase}${suffix}`.trim();
+
+  // extra safety in case of weird whitespace
+  return combined.length > LIMIT_X ? combined.slice(0, LIMIT_X) : combined;
 }
 
-async function listDrafts() {
-  const db = await getDb();
-  const all = await db.getAll(STORE_DRAFTS);
-  // newest first
-  return all.sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || ""));
+function buildOutputs(blogText, tone) {
+  const full = (blogText || "").trim();
+
+  const fbBody = clampText(full, LIMIT_FB);
+  const liBody = clampText(full, LIMIT_LI);
+
+  if (tone === "conversational") {
+    return {
+      twitter: buildXText(full, "#ITLeadership"),
+      facebook: `Quick thought from something I wrote recently:\n\n${fbBody}\n\nIf you’ve been there too, I’d love to hear what you learned.`,
+      linkedin: `Something I’ve been thinking about lately:\n\n${liBody}\n\nWhat would you add from your experience?`,
+    };
+  }
+
+  if (tone === "promotional") {
+    return {
+      twitter: buildXText(`New post: ${full}`, "#ITLeadership"),
+      facebook: `New post is live.\n\n${fbBody}\n\nIf you'd like the full article, I’m happy to share it.`,
+      linkedin: `New post published.\n\n${liBody}\n\nIf you'd like to read the full article, let me know.`,
+    };
+  }
+
+  // professional default
+  return {
+    twitter: buildXText(full, "#ITLeadership"),
+    facebook: `I published a new article and wanted to share one takeaway:\n\n${fbBody}\n\nWhat’s your perspective on this?`,
+    linkedin: `New article reflection:\n\n${liBody}\n\nI’d value input from others who have worked through similar challenges.`,
+  };
 }
 
-async function getDraft(id) {
-  const db = await getDb();
-  return db.get(STORE_DRAFTS, id);
+async function safeSaveDraft(value) {
+  try {
+    const db = await getDb();
+    await db.put(STORE, value, KEY);
+    return { ok: true };
+  } catch (err) {
+    console.error("Draft save failed:", err);
+    return { ok: false, err };
+  }
 }
 
-async function saveDraftRecord(record) {
-  const db = await getDb();
-  await db.put(STORE_DRAFTS, record);
-}
-
-async function deleteDraft(id) {
-  const db = await getDb();
-  await db.delete(STORE_DRAFTS, id);
+async function safeLoadDraft() {
+  try {
+    const db = await getDb();
+    const v = await db.get(STORE, KEY);
+    return { ok: true, value: v };
+  } catch (err) {
+    console.error("Draft load failed:", err);
+    return { ok: false, err, value: null };
+  }
 }
 
 function Layout({ children }) {
-  const [menuOpen, setMenuOpen] = React.useState(false);
-
   return (
-    <div className="appShell">
-      <aside className={`sidebar ${menuOpen ? "open" : ""}`}>
-        <div className="brandRow">
-          <div className="brand">SparkSocial</div>
-          <button
-            className="iconBtn closeBtn"
-            onClick={() => setMenuOpen(false)}
-            aria-label="Close menu"
-            title="Close"
-          >
-            ✕
-          </button>
-        </div>
+    <div className="app">
+      <aside className="sidebar">
+        <h2>SparkSocial</h2>
 
-        <nav className="nav">
-          <NavLink to="/inbox" end onClick={() => setMenuOpen(false)}>
+        <nav>
+          <NavLink to="/inbox" end>
             Inbox
           </NavLink>
-          <NavLink to="/drafts" onClick={() => setMenuOpen(false)}>
-            Drafts
-          </NavLink>
-          <NavLink to="/scheduler" onClick={() => setMenuOpen(false)}>
-            Scheduler
-          </NavLink>
-          <NavLink to="/connections" onClick={() => setMenuOpen(false)}>
-            Connections
-          </NavLink>
-          <NavLink to="/logs" onClick={() => setMenuOpen(false)}>
-            Logs
-          </NavLink>
+          <NavLink to="/drafts">Drafts</NavLink>
+          <NavLink to="/scheduler">Scheduler</NavLink>
+          <NavLink to="/connections">Connections</NavLink>
+          <NavLink to="/logs">Logs</NavLink>
         </nav>
       </aside>
 
-      <div
-        className={`backdrop ${menuOpen ? "show" : ""}`}
-        onClick={() => setMenuOpen(false)}
-        aria-hidden={!menuOpen}
-      />
-
       <main className="main">
-        <header className="header">
-          <button
-            className="iconBtn burger"
-            onClick={() => setMenuOpen((v) => !v)}
-            aria-label="Open menu"
-            title="Menu"
-          >
-            ☰
-          </button>
-
-          <div className="headerTitle">Social Media Management</div>
-          <div className="headerGlow" />
-        </header>
-
+        <header className="header">Social Media Management</header>
         <div className="content">{children}</div>
       </main>
     </div>
   );
-}
-
-function buildOutputs(blogText, tone) {
-
-  const twitterText = clampText(blogText, 260); // keep safe under 280
-  const fullText = blogText.trim();
-
-  const baseHashtag = "#ITLeadership";
-
-  const professional = {
-    twitter: `${twitterText} ${baseHashtag}`.trim(),
-
-    facebook:
-`I published a new article and wanted to share one takeaway:
-
-${fullText}
-
-What’s your perspective on this?`,
-
-    linkedin:
-`New article reflection:
-
-${fullText}
-
-I’d value input from others who have worked through similar challenges.`,
-  };
-
-  const conversational = {
-    twitter: `${twitterText} What do you think?`.trim(),
-
-    facebook:
-`Quick thought from something I wrote recently:
-
-${fullText}
-
-If you’ve been there too, I’d love to hear what you learned.`,
-
-    linkedin:
-`Something I’ve been thinking about lately:
-
-${fullText}
-
-What would you add from your experience?`,
-  };
-
-  const promotional = {
-    twitter: `New post: ${clampText(blogText, 240)}`,
-
-    facebook:
-`New post is live.
-
-${fullText}
-
-If you'd like the full article I’m happy to share it.`,
-
-    linkedin:
-`New post published.
-
-${fullText}
-
-If you'd like to read the full article let me know.`,
-  };
-
-  const map = {
-    professional,
-    conversational,
-    promotional
-  };
-
-  return map[tone] || professional;
 }
 
 function PreviewCard({ variant, body }) {
@@ -279,111 +184,130 @@ function PreviewCard({ variant, body }) {
   );
 }
 
-function PlatformBlock({ title, value, setValue, rightSlot, previewVariant }) {
+function PlatformBlock({
+  title,
+  value,
+  setValue,
+  limit,
+  previewVariant,
+  onCopy,
+}) {
+  const count = (value || "").length;
+  const over = typeof limit === "number" && count > limit;
+
   return (
-    <div className="platformCard">
+    <div className="platformBlock">
       <div className="platformHeader">
         <h3>{title}</h3>
-        <div className="platformActions">{rightSlot}</div>
+        <div className="platformActions">
+          {typeof limit === "number" ? (
+            <span className={over ? "count over" : "count"}>
+              {count}/{limit}
+            </span>
+          ) : null}
+          <button type="button" onClick={onCopy}>
+            Copy
+          </button>
+        </div>
       </div>
 
-      <textarea rows={4} value={value} onChange={(e) => setValue(e.target.value)} />
+      <textarea
+        rows={4}
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+      />
 
       <PreviewCard variant={previewVariant} body={value} />
     </div>
   );
 }
 
-function Inbox({ state, setState }) {
-  const { tone, blogText, twitter, facebook, linkedin } = state;
+function Inbox() {
+  const [tone, setTone] = React.useState("professional");
+  const [blogText, setBlogText] = React.useState("");
+  const [twitter, setTwitter] = React.useState("");
+  const [facebook, setFacebook] = React.useState("");
+  const [linkedin, setLinkedin] = React.useState("");
 
-  const twitterCount = twitter.length;
-  const twitterOver = twitterCount > 280;
+  const [draftStatus, setDraftStatus] = React.useState("Draft: idle");
 
   async function copy(text) {
     if (!text) return;
-    await navigator.clipboard.writeText(text);
+    try {
+      await navigator.clipboard.writeText(text);
+      // optional: you can remove alert later
+      alert("Copied to clipboard");
+    } catch (err) {
+      console.error("Clipboard copy failed:", err);
+      alert("Copy failed. (Browser blocked clipboard access.)");
+    }
   }
 
   function generatePosts() {
     if (!blogText.trim()) return;
+
     const out = buildOutputs(blogText, tone);
-    setState((s) => ({
-      ...s,
-      twitter: out.twitter,
-      facebook: out.facebook,
-      linkedin: out.linkedin,
-    }));
+    setTwitter(out.twitter);
+    setFacebook(out.facebook);
+    setLinkedin(out.linkedin);
   }
 
-  async function saveToDrafts() {
-    const title = clampText((blogText || "").split("\n")[0] || "Untitled", 80) || "Untitled";
-    const record = {
-      id: makeId(),
-      title,
-      tone,
-      blogText,
-      twitter,
-      facebook,
-      linkedin,
-      createdAt: nowISO(),
-      updatedAt: nowISO(),
-    };
-    await saveDraftRecord(record);
-    // small UX touch: you can replace this later with a toast
-    alert("Saved to Drafts");
-  }
-
-  // Load current draft on first render
+  // Load saved draft once
   React.useEffect(() => {
     (async () => {
-      const saved = await kvGet(KV_CURRENT);
-      if (!saved) return;
-      setState((s) => ({
-        ...s,
-        tone: saved.tone || "professional",
-        blogText: saved.blogText || "",
-        twitter: saved.twitter || "",
-        facebook: saved.facebook || "",
-        linkedin: saved.linkedin || "",
-      }));
+      const res = await safeLoadDraft();
+      if (!res.ok || !res.value) {
+        setDraftStatus(res.ok ? "Draft: none" : "Draft: load failed");
+        return;
+      }
+      const saved = res.value;
+      setTone(saved.tone || "professional");
+      setBlogText(saved.blogText || "");
+      setTwitter(saved.twitter || "");
+      setFacebook(saved.facebook || "");
+      setLinkedin(saved.linkedin || "");
+      setDraftStatus("Draft: loaded");
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Autosave current draft whenever state changes
+  // Autosave changes (debounced)
   React.useEffect(() => {
-    (async () => {
-      await kvSet(KV_CURRENT, { tone, blogText, twitter, facebook, linkedin, updatedAt: nowISO() });
-    })();
+    const t = setTimeout(async () => {
+      setDraftStatus("Draft: saving…");
+      const res = await safeSaveDraft({
+        tone,
+        blogText,
+        twitter,
+        facebook,
+        linkedin,
+        savedAt: Date.now(),
+      });
+      setDraftStatus(res.ok ? "Draft: saved" : "Draft: save failed");
+    }, 350);
+
+    return () => clearTimeout(t);
   }, [tone, blogText, twitter, facebook, linkedin]);
 
   return (
-    <div className="page">
-      <div className="pageHead">
-        <div>
-          <h2 className="pageTitle">Blog → Social Media Generator</h2>
-          <div className="pageSub">Generate clean drafts with previews for each platform.</div>
-        </div>
-
-        <div className="pageActions">
-          <button className="btnSecondary" onClick={saveToDrafts}>
-            Save to Drafts
-          </button>
-          <button className="btnPrimary" onClick={generatePosts}>
-            Generate
-          </button>
-        </div>
-      </div>
+    <div>
+      <h2>Blog → Social Media Generator</h2>
 
       <div className="toolbar">
         <div className="toolbarLeft">
           <label className="toolbarLabel">Tone</label>
-          <select value={tone} onChange={(e) => setState((s) => ({ ...s, tone: e.target.value }))}>
+          <select value={tone} onChange={(e) => setTone(e.target.value)}>
             <option value="professional">Professional</option>
             <option value="conversational">Conversational</option>
             <option value="promotional">Promotional</option>
           </select>
+
+          <span className="draftStatus">{draftStatus}</span>
+        </div>
+
+        <div className="toolbarRight">
+          <button type="button" onClick={generatePosts}>
+            Generate
+          </button>
         </div>
       </div>
 
@@ -392,181 +316,62 @@ function Inbox({ state, setState }) {
         rows={10}
         placeholder="Paste your blog article or newsletter text here..."
         value={blogText}
-        onChange={(e) => setState((s) => ({ ...s, blogText: e.target.value }))}
+        onChange={(e) => setBlogText(e.target.value)}
       />
 
       <div className="platformGrid">
         <PlatformBlock
           title="Twitter / X"
           value={twitter}
-          setValue={(v) => setState((s) => ({ ...s, twitter: v }))}
+          setValue={setTwitter}
+          limit={LIMIT_X}
           previewVariant="x"
-          rightSlot={
-            <>
-              <span className={twitterOver ? "count over" : "count"}>{twitterCount}/280</span>
-              <button className="btnSmall" onClick={() => copy(twitter)}>
-                Copy
-              </button>
-            </>
-          }
+          onCopy={() => copy(twitter)}
         />
 
         <PlatformBlock
           title="Facebook"
           value={facebook}
-          setValue={(v) => setState((s) => ({ ...s, facebook: v }))}
+          setValue={setFacebook}
+          limit={LIMIT_FB}
           previewVariant="fb"
-          rightSlot={
-            <button className="btnSmall" onClick={() => copy(facebook)}>
-              Copy
-            </button>
-          }
+          onCopy={() => copy(facebook)}
         />
 
         <PlatformBlock
           title="LinkedIn"
           value={linkedin}
-          setValue={(v) => setState((s) => ({ ...s, linkedin: v }))}
+          setValue={setLinkedin}
+          limit={LIMIT_LI}
           previewVariant="li"
-          rightSlot={
-            <button className="btnSmall" onClick={() => copy(linkedin)}>
-              Copy
-            </button>
-          }
+          onCopy={() => copy(linkedin)}
         />
       </div>
     </div>
   );
 }
 
-function Drafts({ setState }) {
-  const [drafts, setDrafts] = React.useState([]);
-  const [loading, setLoading] = React.useState(true);
-  const navigate = useNavigate();
-
-  async function refresh() {
-    setLoading(true);
-    const all = await listDrafts();
-    setDrafts(all);
-    setLoading(false);
-  }
-
-  React.useEffect(() => {
-    refresh();
-  }, []);
-
-  async function onLoad(id) {
-    const d = await getDraft(id);
-    if (!d) return;
-
-    setState({
-      tone: d.tone || "professional",
-      blogText: d.blogText || "",
-      twitter: d.twitter || "",
-      facebook: d.facebook || "",
-      linkedin: d.linkedin || "",
-    });
-
-    // also set as current so refresh is consistent
-    await kvSet(KV_CURRENT, {
-      tone: d.tone || "professional",
-      blogText: d.blogText || "",
-      twitter: d.twitter || "",
-      facebook: d.facebook || "",
-      linkedin: d.linkedin || "",
-      updatedAt: nowISO(),
-    });
-
-    navigate("/inbox");
-  }
-
-  async function onDelete(id) {
-    if (!confirm("Delete this draft?")) return;
-    await deleteDraft(id);
-    await refresh();
-  }
-
-  return (
-    <div className="page">
-      <div className="pageHead">
-        <div>
-          <h2 className="pageTitle">Drafts</h2>
-          <div className="pageSub">Saved posts you can reload into Inbox.</div>
-        </div>
-
-        <div className="pageActions">
-          <button className="btnSecondary" onClick={refresh}>
-            Refresh
-          </button>
-        </div>
-      </div>
-
-      {loading ? (
-        <div className="emptyState">Loading drafts…</div>
-      ) : drafts.length === 0 ? (
-        <div className="emptyState">
-          No drafts yet. Go to Inbox and click <strong>Save to Drafts</strong>.
-        </div>
-      ) : (
-        <div className="draftGrid">
-          {drafts.map((d) => (
-            <div key={d.id} className="draftCard">
-              <div className="draftTop">
-                <div className="draftTitle">{d.title || "Untitled"}</div>
-                <div className="draftMeta">{(d.tone || "professional").toUpperCase()}</div>
-              </div>
-
-              <div className="draftSnippet">
-                {clampText(d.blogText || d.linkedin || d.facebook || d.twitter || "", 220) || "No content"}
-              </div>
-
-              <div className="draftBottom">
-                <div className="draftTime">
-                  {d.updatedAt ? new Date(d.updatedAt).toLocaleString() : ""}
-                </div>
-                <div className="draftActions">
-                  <button className="btnSmall" onClick={() => onLoad(d.id)}>
-                    Load
-                  </button>
-                  <button className="btnSmallDanger" onClick={() => onDelete(d.id)}>
-                    Delete
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+function Drafts() {
+  return <div>Drafts</div>;
 }
-
 function Scheduler() {
-  return <div className="page"><h2 className="pageTitle">Scheduler</h2><div className="pageSub">Coming soon.</div></div>;
+  return <div>Scheduler</div>;
 }
 function Connections() {
-  return <div className="page"><h2 className="pageTitle">Connections</h2><div className="pageSub">Coming soon.</div></div>;
+  return <div>Connections</div>;
 }
 function Logs() {
-  return <div className="page"><h2 className="pageTitle">Logs</h2><div className="pageSub">Coming soon.</div></div>;
+  return <div>Logs</div>;
 }
 
 export default function App() {
-  const [state, setState] = React.useState({
-    tone: "professional",
-    blogText: "",
-    twitter: "",
-    facebook: "",
-    linkedin: "",
-  });
-
   return (
     <HashRouter>
       <Layout>
         <Routes>
           <Route path="/" element={<Navigate to="/inbox" replace />} />
-          <Route path="/inbox" element={<Inbox state={state} setState={setState} />} />
-          <Route path="/drafts" element={<Drafts setState={setState} />} />
+          <Route path="/inbox" element={<Inbox />} />
+          <Route path="/drafts" element={<Drafts />} />
           <Route path="/scheduler" element={<Scheduler />} />
           <Route path="/connections" element={<Connections />} />
           <Route path="/logs" element={<Logs />} />
