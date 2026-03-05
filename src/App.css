@@ -180,7 +180,7 @@ body {
    Header (animated gradient)
 ----------------------------- */
 .header {
-  position: sticky;
+  position: relative;
   top: 0;
   z-index: 30;
   padding-top: 14px;
