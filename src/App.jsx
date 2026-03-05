@@ -39,9 +39,9 @@ function buildPostsFromBlog(blogText, tone) {
 
   if (!base) {
     return {
-      x: "",
-      facebook: "",
-      linkedin: "",
+      x: "280",
+      facebook: "2000",
+      linkedin: "2000",
     };
   }
 
